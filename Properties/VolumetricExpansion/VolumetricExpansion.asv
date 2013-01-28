@@ -1,0 +1,3 @@
+function beta = VolumetricExpansion(rho,T)
+    
+end

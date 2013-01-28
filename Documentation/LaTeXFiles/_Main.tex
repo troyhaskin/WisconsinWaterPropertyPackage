@@ -1,0 +1,68 @@
+\documentclass[12pt]{article}
+
+
+\usepackage[margin=1.0in]{geometry}
+\usepackage{bookmark}
+\usepackage{xspace}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{lmodern}
+\usepackage{booktabs}
+
+\newcommand{\LeftOne}{\!\:}
+\newcommand{\WP} {\ensuremath{\mathbb{WP}}\xspace}
+\newcommand{\HFE}{Helmholtz free energy\xspace}
+\newcommand{\pdiff}[2]{\dfrac{\partial{#1}}{\partial{#2}}}
+
+\newcommand{\rhoc} {\ensuremath{\rho_{\mbox{\scriptsize c}}}}
+\newcommand{\Tc}   {\ensuremath{T_{\mbox{\scriptsize c}}}}
+\newcommand{\phiR} {\ensuremath{\phi^{\mbox{\scriptsize r}}}}
+\newcommand{\phiO} {\ensuremath{\phi^{\mbox{\scriptsize o}}}}
+\newcommand{\phiRd}{\ensuremath{    \pdiff{\phiR}{\delta}   }}
+\newcommand{\phiOd}{\ensuremath{    \pdiff{\phiO}{\delta}   }}
+\newcommand{\phiRt}{\ensuremath{    \pdiff{\phiR}{\tau  }   }}
+\newcommand{\phiOt}{\ensuremath{    \pdiff{\phiO}{\tau  }   }}
+\newcommand{\phid}{\ensuremath{     \pdiff{\phi} {\delta}   }}
+\newcommand{\phit}{\ensuremath{     \pdiff{\phi} {\tau  }   }}
+
+\definecolor{Gray}{gray}{0.93}
+%\newcommand{\Skip}{\vrule height 1.8em depth 1.30em width 0pt \\[0pt]}  % Below with TeX command vrule
+\newcommand{\Skip}{\rule[-1.4em]{0pt}{3.3em} \\[0pt]}
+\usepackage{tabularx}
+
+\begin{document}
+
+\section{Non-dimensional Forms}
+The IAPWS-95 document possesses a table the summarizes the \HFE function's relationships to a number of thermodynamic properties.
+These relationships, as programmed into the \WP, are a bit different from those documented since constant, scalar non-dimensional properties are preferable and desired.
+The table below summarizes the relations from the IAPWS and those used in the \WP.
+\begin{table}[h!]%
+    \newcommand{\EqualSign}[1][-0.8em]{\hspace{#1}$=$}
+    \newcommand{\Pull     }[1][-0.8em]{\hspace{#1}}
+    \newcommand{\Push     }[1][ 0.5em]{\hspace{#1}}
+    \begin{center}
+        \caption{}
+        \label{}
+        \rowcolors{2}{}{Gray}
+        \begin{tabular}{c c c l c c l}
+            \toprule
+            Property  & \multicolumn{3}{c}{IAPWS-95 Relation} & \multicolumn{3}{c}{\WP Relation} \\\midrule
+            Pressure 
+                &\Push$\dfrac{P}{R\rho{T}}  $&\Pull$=$&\Pull$ 1 + \delta \phiRd$ 
+                &\Push$\dfrac{P}{R\rhoc\Tc} $&\Pull$=$&\Pull$  \left[1 + \delta \phiRd\right]\dfrac{\delta}{\tau}$ \Skip
+            Internal Energy
+                &\Push$\dfrac{i}{R\,T  }    $&\Pull$=$&\Pull$  \tau \phit$ 
+                &\Push$\dfrac{i}{R\,\Tc}    $&\Pull$=$&\Pull$   \phit    $  \Skip
+            Entropy
+                &\Push$\dfrac{s}{R}         $&\Pull$=$&\Pull$  \tau\phit - \phi$ 
+                &\Push$\dfrac{s}{R}         $&\Pull$=$&\Pull$  \tau\phit - \phi$ \Skip
+            Enthalpy
+                &\Push$\dfrac{h}{R\,T}      $&\Pull$=$&\Pull$   1 + \tau \phit + \delta \phiRd$ 
+                &\Push$\dfrac{h}{R\Tc}      $&\Pull$=$&\Pull$ \dfrac{1}{\tau}\left[1 + \tau \phit + \delta \phiRd\right]    $ \Skip
+            \bottomrule
+        \end{tabular}
+    \end{center}
+\end{table}
+
+\end{document}

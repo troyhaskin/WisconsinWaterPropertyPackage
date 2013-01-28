@@ -1,0 +1,245 @@
+    Real(Kind=ExDouble),Dimension(51), Parameter :: &
+        c = (/ 0.0_ExDouble,&
+               0.0_ExDouble,&
+               0.0_ExDouble,&
+               0.0_ExDouble,&
+               0.0_ExDouble,&
+               0.0_ExDouble,&
+               0.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               1.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               2.0_ExDouble,&
+               3.0_ExDouble,&
+               3.0_ExDouble,&
+               3.0_ExDouble,&
+               3.0_ExDouble,&
+               4.0_ExDouble,&
+               6.0_ExDouble,&
+               6.0_ExDouble,&
+               6.0_ExDouble,&
+               6.0_ExDouble  /)
+
+
+    Real(Kind=ExDouble),Dimension(54),Parameter ::   &
+        d = (/  1.0_ExDouble,&
+                1.0_ExDouble,&
+                1.0_ExDouble,&
+                2.0_ExDouble,&
+                2.0_ExDouble,&
+                3.0_ExDouble,&
+                4.0_ExDouble,&
+                1.0_ExDouble,&
+                1.0_ExDouble,&
+                1.0_ExDouble,&
+                2.0_ExDouble,&
+                2.0_ExDouble,&
+                3.0_ExDouble,&
+                4.0_ExDouble,&
+                4.0_ExDouble,&
+                5.0_ExDouble,&
+                7.0_ExDouble,&
+                9.0_ExDouble,&
+               10.0_ExDouble,&
+               11.0_ExDouble,&
+               13.0_ExDouble,&
+               15.0_ExDouble,&
+                1.0_ExDouble,&
+                2.0_ExDouble,&
+                2.0_ExDouble,&
+                2.0_ExDouble,&
+                3.0_ExDouble,&
+                4.0_ExDouble,&
+                4.0_ExDouble,&
+                4.0_ExDouble,&
+                5.0_ExDouble,&
+                6.0_ExDouble,&
+                6.0_ExDouble,&
+                7.0_ExDouble,&
+                9.0_ExDouble,&
+                9.0_ExDouble,&
+                9.0_ExDouble,&
+                9.0_ExDouble,&
+                9.0_ExDouble,&
+               10.0_ExDouble,&
+               10.0_ExDouble,&
+               12.0_ExDouble,&
+                3.0_ExDouble,&
+                4.0_ExDouble,&
+                4.0_ExDouble,&
+                5.0_ExDouble,&
+               14.0_ExDouble,&
+                3.0_ExDouble,&
+                6.0_ExDouble,&
+                6.0_ExDouble,&
+                6.0_ExDouble,&
+                3.0_ExDouble,&
+                3.0_ExDouble,&
+                3.0_ExDouble /)
+
+  
+    Real(Kind=ExDouble),Dimension(54), Parameter ::   &
+        t = (/ -0.5_ExDouble,&
+              0.875_ExDouble,&
+                1.0_ExDouble,&
+                0.5_ExDouble,&
+               0.75_ExDouble,&
+              0.375_ExDouble,&
+                1.0_ExDouble,&
+                4.0_ExDouble,&
+                6.0_ExDouble,&
+               12.0_ExDouble,&
+                1.0_ExDouble,&
+                5.0_ExDouble,&
+                4.0_ExDouble,&
+                2.0_ExDouble,&
+               13.0_ExDouble,&
+                9.0_ExDouble,&
+                3.0_ExDouble,&
+                4.0_ExDouble,&
+               11.0_ExDouble,&
+                4.0_ExDouble,&
+               13.0_ExDouble,&
+                1.0_ExDouble,&
+                7.0_ExDouble,&
+                1.0_ExDouble,&
+                9.0_ExDouble,&
+               10.0_ExDouble,&
+               10.0_ExDouble,&
+                3.0_ExDouble,&
+                7.0_ExDouble,&
+               10.0_ExDouble,&
+               10.0_ExDouble,&
+                6.0_ExDouble,&
+               10.0_ExDouble,&
+               10.0_ExDouble,&
+                1.0_ExDouble,&
+                2.0_ExDouble,&
+                3.0_ExDouble,&
+                4.0_ExDouble,&
+                8.0_ExDouble,&
+                6.0_ExDouble,&
+                9.0_ExDouble,&
+                8.0_ExDouble,&
+               16.0_ExDouble,&
+               22.0_ExDouble,&
+               23.0_ExDouble,&
+               23.0_ExDouble,&
+               10.0_ExDouble,&
+               50.0_ExDouble,&
+               44.0_ExDouble,&
+               46.0_ExDouble,&
+               50.0_ExDouble,&
+                0.0_ExDouble,&
+                1.0_ExDouble,&
+                4.0_ExDouble /)
+
+    Real(Kind=ExDouble),Dimension(56), Parameter ::   &
+        n = (/  0.12533547935523E-1_ExDouble,&
+                0.78957634722828E+1_ExDouble,&
+               -0.87803203303561E+1_ExDouble,&
+                   0.31802509345418_ExDouble,&
+                  -0.26145533859358_ExDouble,&
+               -0.78199751687981E-2_ExDouble,&
+                0.88089493102134E-2_ExDouble,&
+                  -0.66856572307965_ExDouble,&
+                   0.20433810950965_ExDouble,&
+               -0.66212605039687E-4_ExDouble,&
+                  -0.19232721156002_ExDouble,&
+                  -0.25709043003438_ExDouble,&
+                   0.16074868486251_ExDouble,&
+               -0.40092828925807E-1_ExDouble,&
+                0.39343422603254E-6_ExDouble,&
+               -0.75941377088144E-5_ExDouble,&
+                0.56250979351888E-3_ExDouble,&
+               -0.15608652257135E-4_ExDouble,&
+                0.11537996422951E-8_ExDouble,&
+                0.36582165144204E-6_ExDouble,&
+              -0.13251180074668E-11_ExDouble,&
+               -0.62639586912454E-9_ExDouble,&
+                  -0.10793600908932_ExDouble,&
+                0.17611491008752E-1_ExDouble,&
+                   0.22132295167546_ExDouble,&
+                  -0.40247669763528_ExDouble,&
+                   0.58083399985759_ExDouble,&
+                0.49969146990806E-2_ExDouble,&
+               -0.31358700712549E-1_ExDouble,&
+                  -0.74315929710341_ExDouble,&
+                   0.47807329915480_ExDouble,&
+                0.20527940895948E-1_ExDouble,&
+                  -0.13636435110343_ExDouble,&
+                0.14180634400617E-1_ExDouble,&
+                0.83326504880713E-2_ExDouble,&
+               -0.29052336009585E-1_ExDouble,&
+                0.38615085574206E-1_ExDouble,&
+               -0.20393486513704E-1_ExDouble,&
+               -0.16554050063734E-2_ExDouble,&
+                0.19955571979541E-2_ExDouble,&
+                0.15870308324157E-3_ExDouble,&
+               -0.16388568342530E-4_ExDouble,&
+                0.43613615723811E-1_ExDouble,&
+                0.34994005463765E-1_ExDouble,&
+               -0.76788197844621E-1_ExDouble,&
+                0.22446277332006E-1_ExDouble,&
+               -0.62689710414685E-4_ExDouble,&
+               -0.55711118565645E-9_ExDouble,&
+                  -0.19905718354408_ExDouble,&
+                   0.31777497330738_ExDouble,&
+                  -0.11841182425981_ExDouble,&
+                -0.31306260323435E2_ExDouble,&
+                 0.31546140237781E2_ExDouble,&
+                -0.25213154341695E4_ExDouble,&
+                  -0.14874640856724_ExDouble,&
+                   0.31806110878444_ExDouble /)
+                   
+                   
+                   
+    Real(Kind=ExDouble),Dimension(3), Parameter :: &
+    alpha(:) = 20.0_ExDouble    ;
+    ! alpha(2)    = 20    ; 
+    ! alpha(3)    = 20    ;
+    
+    beta(1)     = 150   ;
+    beta(2)     = 150   ;
+    beta(3)     = 250   ;
+    beta(4)     = 0.3   ;
+    beta(5)     = 0.3   ;
+    
+    gamma(1)    = 1.21	;
+    gamma(2)    = 1.21	;
+    gamma(3)    = 1.25	;1.25
+    
+    epsilon(1)	= 1     ;
+    epsilon(2)	= 1     ;
+    epsilon(3)	= 1     ;

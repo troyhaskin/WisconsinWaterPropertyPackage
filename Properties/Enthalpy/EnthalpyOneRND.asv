@@ -1,0 +1,8 @@
+function hnd = EnthalpyOneRND(delta,tau)
+    
+    Phi_t  = Helmholtz_t        (delta,tau);
+    PhiR_d = HelmholtzResidual_d(delta,tau);
+    
+    hnd = (1+ tau .* Phi_t + delta .* 
+    
+end

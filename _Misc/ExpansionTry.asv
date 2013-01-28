@@ -1,0 +1,12 @@
+function rho_T = ExpansionTry(rho,T)
+    
+    [~,rhoc,Tc] = Nondimensionalizers();
+    
+    
+    delta = rho / rhoc;
+    
+    P_delta = PressureOneR_delta(delta,tau);    
+    P_tau   = PressureOneR_tau  (delta,tau);
+    
+    
+end
