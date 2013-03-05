@@ -1,4 +1,4 @@
-function Psi = GenericTwoPhiPropertyFromDeltaTau(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck)
+function Psi = GenericTwoPhiPropertyDT(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck)
     
     if nargin < 3
         PhaseCheck = true;

@@ -1,6 +1,6 @@
 function Psi = GenericTwoPhiProperty(rho,T,OnePhiHandle,TwoPhiOption,PhaseCheck)
        
-    if nargin < 3
+    if nargin < 5
         PhaseCheck = true;
     end
     

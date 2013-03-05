@@ -1,29 +1,36 @@
-function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck)
-       
-    if nargin < 3
+function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck,TwoPhase)
+    
+    if nargin < 5
         PhaseCheck = true;
     end
     
-    % -----------------------------------------------
-    % begin: Allocation and Setup
+    %     Allocation and Setup
+    % ----------------------------
     Nstates = max(length(delta),length(tau));
     Nprops  = size(OnePhiHandle(NaN,NaN,true(Nstates,1)),2);
     Psi     = zeros(Nstates,Nprops);
-    % end:  Allocation and Setup
 
 
+
+    %  Phase Determination
     % -----------------------------------------------
-    %   begin: Phase Determination
-    if PhaseCheck
-        [Psat,delL,delG] = SaturationStateGivenTausat(tau);
-        TwoPhase = GetTwoPhaseMask(delta,delL,delG);
-    else
-        TwoPhase = false(Nstates,1);    
+    switch(nargin == 6)
+        case false
+            % Perform the phase boundary check
+            if PhaseCheck
+                [Psat,delL,delG] = SaturationStateGivenTausat(tau);
+                TwoPhase = GetTwoPhaseMask(delta,delL,delG);
+            else
+                TwoPhase = false(Nstates,1);
+            end
+            
+        case true
+            % The TwoPhase mask has been passed in; skip phase boundary check.
     end
     OnePhase = not(TwoPhase);
     %   end: Phase Determination
     % -----------------------------------------------
-
+    
     
     % -----------------------------------------------
     % begin: One Phase Handling
@@ -31,7 +38,7 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
         del1 = SmartMask(delta,OnePhase);
         tau1 = SmartMask(tau  ,OnePhase);
         
-        Psi(OnePhase,:) = OnePhiHandle(del1,tau1,OnePhase);  
+        Psi(OnePhase,:) = OnePhiHandle(del1,tau1,OnePhase);
     end
     % end: One Phase Handling
     
@@ -59,8 +66,8 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
                 
                 LatentPsi       = PsiG - PsiL;
                 Psi(TwoPhase,:) = PsiL + bsxfun(@times,x,LatentPsi); % Quality-weighted value
-
-
+                
+                
             case({'void','void fracion','homogeneous void fraction'}) % Void-weighted
                 
                 alpha = HomogeneousVoidFraction(del2,delL2,delG2)   ; % Homogeneous Void Fraction
@@ -69,20 +76,24 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
                 
                 LatentPsi       = PsiG - PsiL;
                 Psi(TwoPhase,:) = Psil + bsxfun(@times,alpha,LatentPsi); % Void-weighted value
-
-
-            case('custom handle') % Custom weight function
+                
+                
+            case('customhandle') % Custom weight function
                 Psi(TwoPhase,:) = TwoPhiOption(Psat2,delL2,delG2,del2,tau2,TwoPhase);
                 
+            case('undefined')
+                warning('Thermodynamics:GenericTwoPhiPropertyR:UndefinedTwoPhaseBehavior',...
+                        'Two phase behavior for the property is undefined.');
+
             otherwise
-                
-                error('Thermodynamics:GenericTwoPhiProperty:BadTwoPhaseOption',...
-                      'Improper two-phase option/handle given.');
+                error('Thermodynamics:GenericTwoPhiPropertyR:UnspecifiedTwoPhaseHandling',...
+                      'Improper two-phase option ''%s'' given.',Choice);
+
         end
         % end: Generation of Two-phase Properties
     end
     % end: Two Phase Handling
-    
+
 end
 
 
@@ -90,13 +101,13 @@ end
 function Choice = GetTwoPhiHandlingChoice(TwoPhiOption)
     if ischar(TwoPhiOption)
         Choice = TwoPhiOption;
-
+        
     elseif isa(TwoPhiOption,'function_handle')
-        Choice = 'Custom Handle';
-
+        Choice = 'CustomHandle';
+        
     else
         Choice = '';
-
+        
     end
 end
 
@@ -121,7 +132,7 @@ function TwoPhase = GetTwoPhaseMask(rho,rhol,rhog)
         BelowLiquidDensity = any(bsxfun(@lt,rho,rhol));
         AboveGasDensity    = any(bsxfun(@gt,rho,rhog));
         
-        TwoPhase = BelowLiquidDensity & AboveGasDensity;  
+        TwoPhase = BelowLiquidDensity & AboveGasDensity;
     end
 end
 

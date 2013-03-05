@@ -1,5 +1,5 @@
 function Epsilon = DefaultDerivativeDelta()
     
-    Epsilon = 1E-5;
+    Epsilon = 1E-4;
     
 end
