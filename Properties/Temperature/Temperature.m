@@ -7,7 +7,7 @@ function [T,varargout] = Temperature(rhoMix,iMix,Tguess,PhaseCheck)
     [rhoMix,SizeRho,iMix,SizeI] = Columnify(rhoMix,iMix)        ;
     [rhoMix, iMix]              = BalanceSizes(rhoMix,iMix)     ;
     
-    if (nargin >= 3)
+    if (nargin > 2) && all(not(isnan(Tguess)))
         [rhoMix, Tguess] = BalanceSizes(rhoMix,Tguess)   ;
     end
     
@@ -22,13 +22,30 @@ function [T,varargout] = Temperature(rhoMix,iMix,Tguess,PhaseCheck)
 %
     if PhaseCheck
         [~,Tsat,~,~] = SaturationStateGivenDensity(rhoMix) ; % Get Tsat from rhomix
-        isat         = InternalEnergy(rhoMix,Tsat,false)   ; % Get isat
-        OnePhase     = iMix >= isat                        ;
+
+        isat           = InternalEnergy(rhoMix,Tsat,false)   ; % Get isat
+        BelowVaporDome = iMix < isat                         ;
+
+        if BelowVaporDome
+            [rhoLt,rhoGt] = TriplePointDensities()                  ;
+            Quality       = QualityFromDensity(rhoMix,rhoLt,rhoGt)  ;
+            [itL,itG]     = TriplePointInternalEnergies()           ;
+            itMix         = itL + Quality.*(itG - itL)              ;
+            
+            AboveTripleLine = iMix > itMix;
+        else
+            AboveTripleLine = true(Size); % If it is above the vapor dome, it is above the triple line
+        end
+        
     else
-        OnePhase = true(Size);
+        BelowVaporDome  = false(Size)   ;
+        AboveTripleLine = true(Size)    ;
     end
-    TwoPhase     = not(OnePhase)                       ; % TwoPhase otherwise
-    
+
+    % Phase masks
+    OnePhase = not(BelowVaporDome) & AboveTripleLine;
+    TwoPhase =     BelowVaporDome  & AboveTripleLine; % TwoPhase otherwise
+    SolidGas = not(OnePhase) & not(TwoPhase);
     
     % begin: One-Phase Handling
     if any(OnePhase)
@@ -72,6 +89,20 @@ function [T,varargout] = Temperature(rhoMix,iMix,Tguess,PhaseCheck)
         T(TwoPhase) = SolveTwoPhase(rhoTwo,iTwo,Ttwo,Tsat(TwoPhase));
     end
     % end: Two-Phase Handling
+
+
+    % begin: Solid-Gas Phase Exception
+    if any(SolidGas)
+        
+        warning('WWPP:Temperature:BelowTripleLine',...
+                ['The state defined by the given density and internal energy fall ',...
+                 'below the triple line which is an unsupported regime; therefore, ',...
+                 'the temperature returned is the triple point temperature.']);
+             
+        T(SolidGas) = TriplePointTemperature();
+
+    end
+    % end: Solid-Gas Phase Exception
 
     T = RestoreShape(T,GreatestProduct(SizeRho,SizeI));
     

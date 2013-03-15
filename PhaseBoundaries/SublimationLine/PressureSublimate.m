@@ -1,7 +1,7 @@
 function P = PressureSublimate(T)
     
     % Determine the temperatures in the correct range
-    Mask = (T > 50.0) & (T < 273.16);
+    Mask = (T >= 50.0) & (T <= 273.16);
     
     % If the mask is not empty, do the work
     if not(isempty(Mask))

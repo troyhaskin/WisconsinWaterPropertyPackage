@@ -1,6 +1,6 @@
 function cv = HeatCapacityIsochoricOneR(delta,tau)
     
-    cvStar = DimensioningHeatCacvStar();
+    cvStar = DimensioningHeatCapacity();
     cvND   = HeatCapacityIsochoricOneRND(delta,tau)   ;
     
     cv = cvND * cvStar;

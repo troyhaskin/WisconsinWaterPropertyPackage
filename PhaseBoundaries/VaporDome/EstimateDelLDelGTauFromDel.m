@@ -1,8 +1,5 @@
 function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
     
-    % The NewtonUpdater assumes column vectors
-    [del,SizeDel] = Columnify(del);
-    
     % Allocate
     delL = del * 0;
     delG = del * 0;
@@ -48,21 +45,15 @@ function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
         delL(IsDelG) = delLsol ; % Assign delL value
     end
 
-    
-    % Restore input shape
-    delL = RestoreShape(delL,SizeDel);
-    delG = RestoreShape(delG,SizeDel);
-    tau  = RestoreShape(tau ,SizeDel);
 end
 
 function [dx,Norm] = GetTauFromDelL(tau,Mask,delL)
     
     Residual  = EstimateDelLFromTau(tau) - delL(Mask);
     dResidual = EstimateDelLFromTau_tau(tau);
-    
-    dx   = Residual ./ dResidual;
-    Norm = abs(Residual)        ;
-    
+
+    dx      = Residual ./ dResidual ;
+    Norm = abs(dx);
 end
 
 function [dx,Norm] = GetTauFromDelG(tau,Mask,delG)

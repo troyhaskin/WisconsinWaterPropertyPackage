@@ -11,7 +11,6 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
     Psi     = zeros(Nstates,Nprops);
 
 
-
     %  Phase Determination
     % -----------------------------------------------
     switch(nargin == 6)

@@ -1,7 +1,7 @@
 function P = PressureMeltVII(T)
     
     % Determine the temperatures in the correct range
-    Mask = (T > 355.0) & (T < 715.0);
+    Mask = (T >= 355.0) & (T <= 715.0);
     
     % If the mask is not empty, do the work
     if not(isempty(Mask))

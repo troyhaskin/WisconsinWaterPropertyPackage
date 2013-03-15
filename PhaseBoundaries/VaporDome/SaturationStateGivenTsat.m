@@ -35,10 +35,12 @@ function [Psat,rhol,rhog] = SaturationStateGivenTsat(Tsat,rhol0,rhog0)
     Calculate = not(NearTc) & not(AboveTc)                  ; % Mask for temps. not close to the critical point
     Guess     = [delL(Calculate),delG(Calculate)]           ; % Starting values for the iteration
     UpdateFun = @(x,Mask) Updater(x,Mask,tau(Calculate))    ; % Function used for updating the solution
+    ObjectiveFun = @(x,Mask) Objective(x,Mask,tau(Calculate));
     
     % Solve the system
     if any(Calculate)
-        xSol = NewtonUpdater(UpdateFun,Guess,Tolerance,IterMax);
+        %xSol = NewtonUpdater(UpdateFun,Guess,Tolerance,IterMax);
+        xSol = BackTrackingNewtonUpdater(UpdateFun,ObjectiveFun,Guess,Tolerance,IterMax);
         
         % Update the iterated values
         rhol(Calculate) = xSol(:,1) * rhoc;
@@ -108,4 +110,29 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     dx    = [ddelL,ddelG];
     RNorm = abs(R1) + abs(R2);
     
+end
+
+function RNorm = Objective(x,Mask,tau0)
+    
+    if any(x(:) <= 0)
+        RNorm = NaN;
+        return
+    end
+    
+    tau  = tau0(Mask);
+    delL = x(:,1);
+    delG = x(:,2);
+
+    PhiR    = @(delta) HelmholtzResidual   (delta,tau);
+    PhiR_d  = @(delta) HelmholtzResidual_d (delta,tau);
+    
+    Psig1    = PhiR(delL) - PhiR(delG) + log(delL./delG)    ;
+    
+    PdelL = 1 + delL.*PhiR_d(delL);
+    PdelG = 1 + delG.*PhiR_d(delG);
+    
+    R1 = delG.*Psig1 - PdelL.*(delL-delG);
+    R2 = delL.*Psig1 - PdelG.*(delL-delG);
+    
+    RNorm = abs(R1) + abs(R2);
 end

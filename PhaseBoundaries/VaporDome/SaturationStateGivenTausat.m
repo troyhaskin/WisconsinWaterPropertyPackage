@@ -69,7 +69,7 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     tau  = tau0(Mask);
     delL = x(:,1);
     delG = x(:,2);
-    
+
     PhiR    = @(delta) HelmholtzResidual   (delta,tau);
     PhiR_d  = @(delta) HelmholtzResidual_d (delta,tau);
     PhiR_dd = @(delta) HelmholtzResidual_dd(delta,tau);

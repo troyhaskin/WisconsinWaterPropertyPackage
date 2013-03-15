@@ -10,8 +10,12 @@ function HelmDeriv = HelmholtzIdealGas_tt(~,tau)
     SumErr      = 0                     ;
     
     for k = 4:8
-        Part    = exp(-gamma_o(k).*tau);
-        Part    = - n_o(k) * gamma_o(k)^2 * Part./(1-Part).^2;
+        %   The default equation from the IAPWS-95 document is this:
+        %       Part = - n_o(k) * gamma_o(k)^2 * exp(-gamma_o(k).*tau)./(1-exp(-gamma_o(k).*tau)).^2;
+        %   However, the equivalent reformulation below is used since it is less 
+        %   computationally intensive.
+        %
+        Part    = 0.5 * n_o(k) * gamma_o(k)^2 ./(1 - cosh(gamma_o(k) * tau));
         [HelmDeriv,SumErr] = KahanSum(HelmDeriv,Part,SumErr);
     end
 end

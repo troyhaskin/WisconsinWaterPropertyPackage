@@ -1,6 +1,6 @@
 function mu = ViscosityOneR(delta,tau)
     
-    muRef = ReferenceViscosity()            ; %[Pa-s]
+    muRef = DimensioningViscosity()            ; %[Pa-s]
     muND  = ViscosityOneRND(delta,tau)   ; %[-]
     
     mu    = muND * muRef;%[Pa-s]
