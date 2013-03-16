@@ -17,11 +17,10 @@ function tau = EstimateTauFromDelL(delL)
     %           to turn over.
     %     3.)   Zone 3 runs from 450K to 644K, where the break is made such that
     %           hig accuracy near the critical point can be made.
-    %     4.)   Zone 4 runs from 644K to 647.096K and offers a good approximation
-    %           of tau near the critical point.  The values in this zone
-    %           could be used instead of solving the equilibrium system since
-    %           the solution near the critical point has been found to be highly
-    %           unstable.
+    %     4.)   Zone 4 runs from 644K to 1.00001*647.096K and offers a good approximation
+    %           of tau almost near the critical point.
+    %     5.)   Zone 5 run from 1.00001*647.096K to 647.096 and offers a good approximation
+    %           of tau near the critical point.
     
     
     % Optional argument
@@ -29,6 +28,7 @@ function tau = EstimateTauFromDelL(delL)
 %     delLMax  = 3.10535755003;
     delL450K = 2.76503493715;
     delL644K = 1.36693897706;
+    delLNear = 1.00001      ;
     delLCrit = 1            ;
     
     % Setup
@@ -36,13 +36,15 @@ function tau = EstimateTauFromDelL(delL)
     Zone1           =                      (delL >= delLTrip);
     Zone2           = (delL <  delLTrip) & (delL >  delL450K);
     Zone3           = (delL <  delL450K) & (delL >  delL644K);
-    Zone4           = (delL <  delL644K) & (delL >= delLCrit);
+    Zone4           = (delL <  delL644K) & (delL >= delLNear);
+    Zone5           = (delL <  delLNear) & (delL >= delLCrit);
     
     tau = delL * 0;
     tau(Zone1) = TauGuessZone1(delL(Zone1)); % Constat valuedue to the multi-valuedness of this region
     tau(Zone2) = TauGuessZone2(delL(Zone2));
     tau(Zone3) = TauGuessZone3(delL(Zone3));
     tau(Zone4) = TauGuessZone4(delL(Zone4));
+    tau(Zone5) = TauGuessZone5(delL(Zone5));
     
     tau = RestoreShape(tau,SizeDelL);
 end
@@ -127,5 +129,18 @@ function tau = TauGuessZone4(delL)
             +1.0023628234E+000];
     
     mu  = [+1.2846636314E+000,+1.1053989397E-001];
+    tau = HornersMethod(delL,c,mu);
+end
+
+function tau = TauGuessZone5(delL)
+    c = [   -1.2427888617613720E-13;
+            +1.6349800613368345E-11;
+            -1.6826603201245960E-09;
+            +1.7914607206586920E-07;
+            +1.5044848361890351E-06;
+            +4.0702911932209303E-06;
+            +1.0000036400293815E+00 ];
+    mu = [+1.0309140731308570E+00,+1.1619681188514367E-02];
+    
     tau = HornersMethod(delL,c,mu);
 end

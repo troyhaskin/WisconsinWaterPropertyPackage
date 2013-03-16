@@ -1,5 +1,5 @@
-clc;
-clear('all');
+% clc;
+% clear('all');
 
 %   Calculations have shown that EstimateDelLDelGTauFromDel() will generate incorrect
 %   (i.e., imaginary or non-physical) guess values for tau if del is "near" 1 since
@@ -16,31 +16,71 @@ clear('all');
 %   algorithim will be robust (i.e., the critical point is completely removed from the 
 %   saturation calculation.
 
-Nfit     = 6E6  ;
-OrderFit = 6    ;
-tauFit = [linspace(1,1.0000000001,10*Nfit),linspace(1.00000000011,1.00001,Nfit)]';
+% Fitting parameters
+Nfit     = 6.5E5  ;
+OrderFit = 6;
 
-delLfit = EstimateDelLFromTau(tauFit);
-delGfit = EstimateDelGFromTau(tauFit);
+% taus used to sample the guessing correlation
+tauSamp = ChebyshevSpace(1,1.00001,Nfit);
 
-[pLfit,sLfit,muLfit] = polyfit(delLfit,tauFit,OrderFit);
-delLplot = linspace(1,delLfit(end),25);
-tauLplot = polyval(pLfit,delLplot,sLfit,muLfit);
-
-[pGfit,sGfit,muGfit] = polyfit(delGfit,tauFit,OrderFit);
-delGplot = linspace(1,delGfit(end),25);
-tauGplot = polyval(pGfit,delGplot,sGfit,muGfit);
-
-clf();
-figure(1);hold('on');
-plot(delLfit,tauFit,'k',delLplot,tauLplot,'ro');
-plot(delGfit,tauFit,'k',delGplot,tauGplot,'ro');
+% liquid and gas deltas sampled from the guessing correlation
+delLsamp = EstimateDelLFromTau(tauSamp);
+delGsamp = EstimateDelGFromTau(tauSamp);
 
 
-Show([tauLplot(1),tauLplot(1)-tauFit(1)]','%+25.16E');
-Show([tauLplot(end),tauLplot(end)-tauFit(end)]','%+25.16E');
-Show([tauGplot(1),tauGplot(1)-tauFit(1)]','%+25.16E');
-Show([tauGplot(end),tauGplot(end)-tauFit(end)]','%+25.16E');
+% polynomial fit for tau as a function of liquid delta
+[pLfit,sLfit,muLfit] = polyfit(delLsamp,tauSamp,OrderFit);
+delLFit = linspace(1,delLsamp(end),25);
+tauLFit = polyval(pLfit,delLFit,sLfit,muLfit);
 
-hold('off');
+% polynomial fit for tau as a function of gas delta
+[pGfit,sGfit,muGfit] = polyfit(delGsamp,tauSamp,OrderFit);
+delGFit = linspace(1,delGsamp(end),25);
+tauGFit = polyval(pGfit,delGFit,sGfit,muGfit);
+
+% Sample values for Fit points
+tauSampLCompare = interp1(delLsamp,tauSamp,delLFit,'pchip');
+tauSampGCompare = interp1(delGsamp,tauSamp,delGFit,'pchip');
+
+
+% Plot correlation and fit values
+figure(1);
+plot(delLsamp,tauSamp,'k',delLFit,tauLFit,'ro',...
+     delGsamp,tauSamp,'k',delGFit,tauGFit,'ro');
+box('on');
+grid('on');
+xlabel('delta [-]');
+ylabel('tau [-]');
+
+figure(2);
+semilogy(delLFit,abs(tauSampLCompare - tauLFit),...
+         delGFit,abs(tauSampGCompare - tauGFit));
+box('on');
+grid('on');
+xlabel('delta [-]');
+ylabel('Delta tau [-]');
+
+
+
+% Norms and Statistics
+fprintf('                Summary of Fit Statistics              \n');
+fprintf('=======================================================\n');
+fprintf('\nOrder of polynomial: %G\n\n',OrderFit);
+% Reduced Liquid Fit Statistics
+fprintf('Reduced Liquid Fit:\n');
+fprintf('    Critical tau:\n');
+fprintf('        Value:          %+23.16E\n',tauLFit(1));
+fprintf('        Absolute Error: %+23.16E\n\n',tauLFit(1) - 1);
+fprintf('    Compared to Correlation:\n');
+fprintf('        L_1   Norm:      %+23.16E\n',norm(tauSampLCompare - tauLFit,1));
+fprintf('        L_Inf Norm:      %+23.16E\n\n',norm(tauSampLCompare - tauLFit,Inf));
+% Reduced Liquid Fit Statistics
+fprintf('Reduced Gas Fit:\n');
+fprintf('    Critical tau:\n');
+fprintf('        Value:          %+23.16E\n',tauGFit(1));
+fprintf('        Absolute Error: %+23.16E\n\n',tauGFit(1) - 1);
+fprintf('    Compared to Correlation:\n');
+fprintf('        L_1   Norm:     %+23.16E\n',norm(tauSampGCompare - tauGFit,1));
+fprintf('        L_Inf Norm:     %+23.16E\n',norm(tauSampGCompare - tauGFit,Inf));
+
 

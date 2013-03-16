@@ -7,7 +7,7 @@ function [T,varargout] = Temperature(rhoMix,iMix,Tguess,PhaseCheck)
     [rhoMix,SizeRho,iMix,SizeI] = Columnify(rhoMix,iMix)        ;
     [rhoMix, iMix]              = BalanceSizes(rhoMix,iMix)     ;
     
-    if (nargin > 2) && all(not(isnan(Tguess)))
+    if (nargin > 2) && all(not(isempty(Tguess))) && all(not(isnan(Tguess)))
         [rhoMix, Tguess] = BalanceSizes(rhoMix,Tguess)   ;
     end
     
@@ -80,7 +80,7 @@ function [T,varargout] = Temperature(rhoMix,iMix,Tguess,PhaseCheck)
         
         % User-supplied initial guess
         if (nargin < 3) || isempty(Tguess)
-            Ttwo = [];
+            Ttwo = Tsat;
         else 
             Ttwo = Tguess(TwoPhase);
         end

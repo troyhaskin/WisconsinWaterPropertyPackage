@@ -7,12 +7,12 @@ function tau = EstimateTauFromDelG(delG)
     %
     %   The fits are in fives zones where the divisions were somewhat arbitrary
     %   and mostly made based on qualitatively accuracy requirements:
-    %       1.) 273.16K - 350.00K
-    %       2.) 350.00K - 500.00K
-    %       3.) 500.00K - 625.00K
-    %       4.) 625.00K - 640.00K
-    %       5.) 640.00K - 647.096K
-    %
+    %       1.) 273.16K   - 350.00K
+    %       2.) 350.00K   - 500.00K
+    %       3.) 500.00K   - 625.00K
+    %       4.) 625.00K   - 640.00K
+    %       5.) 640.00K   - 647.0895K
+    %       6.) 647.0895K - 647.096K
     
     %
     delGTrip = 1.50763221266E-005;
@@ -20,6 +20,7 @@ function tau = EstimateTauFromDelG(delG)
     delG500K = 4.09903928885E-002;
     delG625K = 3.67361100488E-001;
     delG640K = 5.49628716184E-001;
+    delGNear = 9.55984336392E-001;
     delGCrit = 1                 ;
     
     % Setup
@@ -28,7 +29,8 @@ function tau = EstimateTauFromDelG(delG)
     Zone2           = (delG >  delG350K) & (delG <  delG500K);
     Zone3           = (delG >  delG500K) & (delG <  delG625K);
     Zone4           = (delG >  delG625K) & (delG <  delG640K);
-    Zone5           = (delG >  delG640K) & (delG <  delGCrit);
+    Zone5           = (delG >  delG640K) & (delG <  delGNear);
+    Zone6           = (delG >  delGNear) & (delG <  delGCrit);
     
     tau        = delG * 0;
     tau(Zone1) = TauGuessZone1(delG(Zone1));
@@ -36,6 +38,7 @@ function tau = EstimateTauFromDelG(delG)
     tau(Zone3) = TauGuessZone3(delG(Zone3));
     tau(Zone4) = TauGuessZone4(delG(Zone4));
     tau(Zone5) = TauGuessZone5(delG(Zone5));
+    tau(Zone6) = TauGuessZone6(delG(Zone6));
     
     tau = RestoreShape(tau,SizeDelG);
 end
@@ -144,5 +147,20 @@ function tau = TauGuessZone5(delG)
             +1.0039251895E+000];
     
     mu  = [+6.7709296663E-001,+1.1948666743E-001];
+    tau = HornersMethod(delG,c,mu);
+end
+
+
+function tau = TauGuessZone6(delG)
+    c = [   -5.8888931624887446E-13;
+            -3.3590363359348875E-11;
+            -5.1209232832641621E-10;
+            -1.8576024219530422E-07;
+            +1.5151724268411565E-06;
+            -4.0702210622798952E-06;
+            +1.0000036325648092E+00 ];
+
+    mu = [+9.6863921202293113E-01,+1.1757101679711156E-02];
+    
     tau = HornersMethod(delG,c,mu);
 end

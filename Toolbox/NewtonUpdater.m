@@ -52,8 +52,7 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,LoopContraction)
             xk          = xkp1(NotConverged,:)      ;
             SumErr      = SumErr(NotConverged,:)    ;
         end
-        
-        disp(Iter);
+
     end
     
     
