@@ -35,12 +35,12 @@ function [Psat,rhol,rhog] = SaturationStateGivenTsat(Tsat,rhol0,rhog0)
     Calculate = not(NearTc) & not(AboveTc)                  ; % Mask for temps. not close to the critical point
     Guess     = [delL(Calculate),delG(Calculate)]           ; % Starting values for the iteration
     UpdateFun = @(x,Mask) Updater(x,Mask,tau(Calculate))    ; % Function used for updating the solution
-    ObjectiveFun = @(x,Mask) Objective(x,Mask,tau(Calculate));
+%     ObjectiveFun = @(x,Mask) Objective(x,Mask,tau(Calculate));
     
     % Solve the system
     if any(Calculate)
-        %xSol = NewtonUpdater(UpdateFun,Guess,Tolerance,IterMax);
-        xSol = BackTrackingNewtonUpdater(UpdateFun,ObjectiveFun,Guess,Tolerance,IterMax);
+        xSol = NewtonUpdater(UpdateFun,Guess,Tolerance,IterMax);
+%         xSol = BackTrackingNewtonUpdater(UpdateFun,ObjectiveFun,Guess,Tolerance,IterMax);
         
         % Update the iterated values
         rhol(Calculate) = xSol(:,1) * rhoc;

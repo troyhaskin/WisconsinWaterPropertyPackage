@@ -130,6 +130,6 @@ function T = SolveOnePhase(rho,i,Tguess)
     
 end
 
-function T = SolveTwoPhase(rho,i,Tguess,Tsat)
-    [~,T,~,~,~] = SaturationStateGivenRhoImix(rho,i,Tguess,Tsat);
+function T = SolveTwoPhase(rho,i,varargin)
+    [~,T,~,~,~] = SaturationStateGivenMixedRhoI(rho,i); %,Tguess,Tsat);
 end

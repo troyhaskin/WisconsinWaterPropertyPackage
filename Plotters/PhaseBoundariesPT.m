@@ -1,4 +1,4 @@
-function Handle = PhaseBoudariesPT(Npoints)
+function Handle = PhaseBoundariesPT(Npoints)
     
     if (nargin < 1) || isempty(Npoints)
         Npoints = 500;
@@ -7,7 +7,7 @@ function Handle = PhaseBoudariesPT(Npoints)
     Tt = TriplePointTemperature();
     Tc = CriticalTemperature();
     
-    Tih  = GeometricSpace(251.165,Tt,0.960, Npoints)';
+    Tih  = linspace(Tt,251.165,Npoints);
     Tiii = linspace(251.165 , 256.164 , Npoints);
     Tv   = linspace(256.164 , 273.31  , Npoints);
     Tvi  = linspace(273.31  , 355     , Npoints);
@@ -28,7 +28,8 @@ function Handle = PhaseBoudariesPT(Npoints)
     [Psat,~,~] = SaturationStateGivenTsat(Tsat);
     
     
-    Handle = semilogy(Tmelt,Pmelt/1E6,'b',Tsub,Psub/1E6,'r',Tsat,Psat/1E6,'k','LineWidth',2);
+    semilogy(Tmelt,Pmelt/1E6,'b',Tsub,Psub/1E6,'r',Tsat,Psat/1E6,'k','LineWidth',2);
+    Handle = gca;
     xlabel('Temperature [K]');
     ylabel('Pressure [MPa]');
     axis([200,700,1E-7,5E4]);
