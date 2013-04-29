@@ -184,7 +184,7 @@ function [RNorm,ddelG,dtau] = UpdateGasSystem(delL,delG,tau)
     
 %     Pnodim = @(del,tau) 1 + del.*PhiR_d(del,tau);
     
-    % Psig is the (essentiall) the Gibb's Energy Equality the is eliminated from
+    % Psig is (essentially) the Gibb's Energy Equality the is eliminated from
     % the system to shrink the solution space.  Here are the functions and
     % derivatives that are needed in the residuals below.
     %
@@ -261,6 +261,7 @@ function [RNorm,ddelL,dtau] = UpdateLiquidSystem(delL,delG,tau)
     dtau  =  (R2 .* R1_d - R1 .* R2_d) ./ DetR ;
     RNorm = abs(R1) + abs(R2);
 end
+
 
 % function tau = TauGuessGasSide(del)
 %     c = [+3.104332488E-004,...
