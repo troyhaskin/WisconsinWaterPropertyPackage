@@ -30,8 +30,8 @@ function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
         tauL           = EstimateTauFromDelL(del(IsDelL));                 % Get initial guess
 
         if any(IterateL)
-            Updater        = @(tau,Mask) GetTauFromDelL(tau,Mask,del(IterateL)); % Update handle
-            tauL(IterateL) = NewtonUpdater(Updater,tauL(IterateL),Tolerance,IterMax);   % Solve
+            Updater = @(tau,Mask) GetTauFromDelL(tau,Mask,del(IterateL)); % Update handle
+            tauL    = NewtonUpdater(Updater,tauL,Tolerance,IterMax);   % Solve
         end
 
         tau (IsDelL) = tauL    ; % Assign tau value
@@ -43,8 +43,8 @@ function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
         tauG = EstimateTauFromDelG(del(IsDelG));                 % Get initial guess
         
         if any(IterateG)
-            Updater        = @(tau,Mask) GetTauFromDelG(tau,Mask,del(IterateG)); % Update handle
-            tauG(IterateG) = NewtonUpdater(Updater,tauG(IterateG),Tolerance,IterMax);   % Solve
+            Updater = @(tau,Mask) GetTauFromDelG(tau,Mask,del(IterateG)); % Update handle
+            tauG    = NewtonUpdater(Updater,tauG,Tolerance,IterMax);   % Solve
         end
 
         tau (IsDelG) = tauG    ; % Assign tau value
