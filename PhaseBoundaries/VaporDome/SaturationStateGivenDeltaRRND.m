@@ -6,7 +6,7 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     
     % Filter out non-unique entries
     if (nargin < 2) || isempty(UniqueMask)
-        [delGiven,~,UniqueMask] = unique(delGiven,'stable');
+        [delGiven,~,UniqueMask] = UniqueEnough(delGiven,min(eps(delGiven)));
     end
 
     % Given Masks
@@ -56,7 +56,7 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     %                   property to uniquely specify the saturation state is required.
     %
     
-    [delLmax   , delGmin]   = SaturationLineDensityBoundsR()        ;
+    [delLmax   , delGmin  ] = SaturationLineDensityBoundsR()        ;
     [delLnearC , delGnearC] = NearCriticalStabilityDensityLimitsR() ;
     [delLnearT , delGnearT] = NearTripleStabilityDensityLimitsR()   ;
 
@@ -93,7 +93,7 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
         warning('WWPP:SaturationStateGivenDeltaRRND:MultiValuedRegime'                  ,...
                 ['Some of the supplied densities supplied fall into a regime where '    ,...
                  'the saturation state is not uniquely defined.  Returned values are '  ,...
-                 'come the average of the two temperatures at which the density '       ,...
+                 'the average of the two temperatures at which the density '            ,...
                  'occurs.  If this is not acceptable, please use a function that '      ,...
                  'uses another indepedent property to fully define the saturation '     ,...
                  'state.']);
@@ -142,11 +142,6 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     delL = delGiven;
     tau  = delGiven;
     
-    % Insert guess values
-    delG(WillGuess & GivenL) = delGguess  ;
-    delL(WillGuess & GivenG) = delLguess  ;
-    tau (WillGuess)          = tauGuess   ;
-    
     % Insert Newton solutions
     delG(WillIterate & GivenL) = delGsol    ;
     delL(WillIterate & GivenG) = delLsol    ;
@@ -183,6 +178,21 @@ end
 
 
 function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
+%
+%   This function provides the Newton updates for an unknown reduced density
+%   delUnknown and associated saturation temperature tauSat given the opposing reduced 
+%   density delKnown.  The residual to be minimized is
+%       --                  --   --                                                  --
+%       | RL(delL,delG,tauS) |   | delL [f delG - (delL - delG) (1 + delL PhiR_delL)] |
+%       |                    | = |                                                    |
+%       | RG(delL,delG,tauS) |   | delG [f delL - (delL - delG) (1 + delG PhiR_delG)] |
+%       --                  --   --                                                  --
+%   where
+%
+%       f         = PhiR(delL,tauS) - PhiR(delG,tauS) + Log(delL/delG)
+%       PhiR_del* = PhiR_del(del*,tauS)
+%
+%
     
     % Pull unknowns
     dels = Unknowns(:,1);
@@ -196,41 +206,50 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
     %       These are different from the delGiven masks since the Unknowns are returned 
     %       to this function already contracted (i.e., masked).
     %
-    Nmask   = length(Mask)          ; % Number of unconverged values
-    NgivenL = sum(lGivenL)          ; % number of liquid knowns remaining
-    iGivenL =       1    : NgivenL  ; % integer mask for unknown delGs
-    iGivenG = (NgivenL+1): Nmask    ; % integer mask for unknown delLs
+    Nmask   = length(Mask)      ; % Number of unconverged values
+    NgivenL = sum(lGivenL)      ; % number of liquid knowns remaining
+    NgivenG = Nmask - NgivenL   ; % number of gas    knowns remaining
+    iGivenMaskL = Mask(lGivenL) ;
+    iGivenMaskG = Mask(lGivenG) ;
+    
+    NgivenLremain = sum(sum(lGivenL));
+    iUnknownMaskL = 1 : NgivenLremain;
+    iUnknownMaskG = (NgivenLremain + 1) : Nmask;
 
     % Assign the Unknowns to descriptive variables
-    delGgivenL = dels(iGivenL);
-    delLgivenG = dels(iGivenG);
-    tauLgivenL = taus(iGivenL);
-    tauGgivenG = taus(iGivenG);
+    delLL = delGiven(iGivenMaskL)  ;
+    delGL = dels(iUnknownMaskL)      ;
+    tauLL = taus(iUnknownMaskL)      ;
 
     % Pull delGiven for unconverged Unknowns
-    delLgivenL = delGiven(lGivenL);
-    delGgivenG = delGiven(lGivenG);
-
-    % Combined vectors for liquid/gas-given agnostic (LGA) evaluations (aides in vectorization)
-    delL = [delLgivenL ; delLgivenG ];
-    delG = [delGgivenL ; delGgivenG ];
-    tau  = [tauLgivenL ; tauGgivenG ];
+    delLG = dels(iGivenMaskG)      ;
+    delGG = delGiven(iUnknownMaskG)  ;
+    tauGG = taus(iUnknownMaskG)      ;
 
     % Integer masks for vectorized Helmholtz functions:
     %       The most expensive evaluation in almost all of these thermodynamic calls is 
     %       the Helmholtz free energy functions.  As such, one the biggest optimizations
     %       lies in reducing calls to those functions by vectorizing as much as possible.
-    %       
+    %
+    % Pack the dels and taus for input into the HFE functions
+    delHelm = [delLL;delGL;delLG;delGG];
+    tauHelm = [tauLL;tauLL;tauGG;tauGG];
 
-
-    % Helmholtz energy function handles (d = del, t = tau; shortened to not 
-    % conflict with above variables).
-    PhiR    = @(d,t) HelmholtzResidual   (d,t);
-    PhiR_d  = @(d,t) HelmholtzResidual_d (d,t);
-    PhiR_t  = @(d,t) HelmholtzResidual_t (d,t);
-    PhiR_dd = @(d,t) HelmholtzResidual_dd(d,t);
-    PhiR_dt = @(d,t) HelmholtzResidual_dt(d,t);
-
+    % Call the required HFE functions
+    PhiR    = HelmholtzResidual   (delHelm,tauHelm);
+    PhiR_d  = HelmholtzResidual_d (delHelm,tauHelm);
+    PhiR_t  = HelmholtzResidual_t (delHelm,tauHelm);
+    PhiR_dd = HelmholtzResidual_dd(delHelm,tauHelm);
+    PhiR_dt = HelmholtzResidual_dt(delHelm,tauHelm);
+    
+    % Unpack values
+    Chunks = [NgivenL,NgivenL,NgivenG,NgivenG];
+    [PhiRLL   ,PhiRGL   ,PhiRLG   ,PhiRGG   ] = VectorChunk(PhiR   ,Chunks);
+    [PhiRLL_d ,PhiRGL_d ,PhiRLG_d ,PhiRGG_d ] = VectorChunk(PhiR_d ,Chunks);
+    [PhiRLL_t ,PhiRGL_t ,PhiRLG_t ,PhiRGG_t ] = VectorChunk(PhiR_t ,Chunks);
+    [~        ,PhiRGL_dd,PhiRLG_dd,~        ] = VectorChunk(PhiR_dd,Chunks);
+    [PhiRLL_dt,PhiRGL_dt,PhiRLG_dt,PhiRGG_dt] = VectorChunk(PhiR_dt,Chunks);
+    
 
     % ============================================================================ %
     %                      Calculate Dimensionless Pressure                        %
@@ -239,52 +258,47 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
     % the system to shrink the solution space.  Here are the functions and
     % derivatives that are needed in the residuals below.
 
-    % Pnd = Pnd1 * Pnd2 to more easily maintain/check the handles.
-    Pnd1 = PhiR(delL,tau) - PhiR(delG,tau) + log(delL./delG); % LGA
-    Pnd2 = (delL.*delG)./(delL - delG)                      ; % LGA
-
-    % tau derivatives  (LGA)
-    Pnd1_t = PhiR_t(delL,tau) - PhiR_t(delG,tau);
-    Pnd2_t = 0                                  ;
-
-    % del derivatives while solving for delG, tauG with delL given
-    if any(GivenL)
-        Pnd1_dL = 1./delLL + PhiR_d(delLL,tauL) ;
-        f       = delGL./(delLL - delGL)        ;
-        Pnd2_dL = (1 - delLL./(delLL-delGL)).*f ;
-    else
-        Pnd1_dL = [];
-        Pnd2_dL = [];
-    end
+    fL = PhiRLL - PhiRGL + log(delLL./delGL);
+    fG = PhiRLG - PhiRGG + log(delLG./delGG);
     
-    % del derivatives while solving for delL, tauL with delG given
-    if any(GivenG)
-        Pnd1_dG = -1./delGG - PhiR_d(delGG,tauG);
-        f        = delLG./(delLG - delGG)       ;
-        Pnd2_dG = (1 + delLG./(delLG-delGG)).*f ;
-    else
-        Pnd1_dG = [];
-        Pnd2_dG = [];
-    end
-    
-    % Create combined Pnd*_d vectors
-    Pnd1_d = [Pnd1_dL ; Pnd1_dG];
-    Pnd2_d = [Pnd2_dL ; Pnd2_dG];
-    
-    % Pnd calculated
-    Pnd    = Pnd1   .* Pnd2                    ;
-    Pnd_d  = Pnd1_d .* Pnd2 + Pnd2_d .* Pnd1   ;
-    Pnd_t  = Pnd1_t .* Pnd2 + Pnd2_t .* Pnd1   ;
+    R1 = [ fL .* delLL .* delGL  + delLL .* (delGL - delLL) .* (1 + delLL .* PhiRLL_d);...
+           fG .* delLG .* delGG  + delLG .* (delGG - delLG) .* (1 + delLG .* PhiRLG_d)];
 
-    % Residuals
-    R1   = Pnd  - delL .* (1 + delL.*PhiR_d(delL,tau));
-    R2   = Pnd  - delG .* (1 + delG.*PhiR_d(delG,tau));
+	R2 = [ fL .* delLL .* delGL  + delGL .* (delGL - delLL) .* (1 + delGL .* PhiRGL_d);...
+           fG .* delLG .* delGG  + delGG .* (delGG - delLG) .* (1 + delGG .* PhiRGG_d)];
+    
+    % Helper variables for Jacobian evalutions
+    fL_d = delLL .* (fL - 1 - delGL .* PhiRGL_d);
+    fG_d = delGG .* (fG + 1 + delLG .* PhiRLG_d);
+    fL_t = (PhiRLL_t - PhiRGL_t) .* delLL .* delGL ;
+    fG_t = (PhiRLG_t - PhiRGG_t) .* delLG .* delGG ;
+    %
+    gLL   = 1 + delLL .* PhiRLL_d;
+    gGL   = 1 + delGL .* PhiRGL_d;
+    gGL_d = PhiRGL_d + delGL .* PhiRGL_dd;
+    gLL_t = delLL .* PhiRLL_dt;
+    gGL_t = delGL .* PhiRGL_dt;
+    gLG   = 1 + delLG .* PhiRLG_d;
+    gGG   = 1 + delGG .* PhiRGG_d;
+    gLG_d = PhiRLG_d + delLG .* PhiRLG_dd;
+    gLG_t = delLG .* PhiRLG_dt;
+    gGG_t = delGG .* PhiRGG_dt;
+    
     
     % Jacobian values
-    R1_d = Pnd_d - (1 + 2*delL.*PhiR_d(delL,tau) + delL.^2.*PhiR_dd(delL,tau))  ;
-    R1_t = Pnd_t - delL.^2 .* PhiR_dt(delL,tau)                                 ;
-    R2_d = Pnd_d                                                                ;
-    R2_t = Pnd_t - delG.^2 .* PhiR_dt(delG,tau)                                 ;
+    R1_d = [                          delLL .* gLL + fL_d                           ;...
+            (delGG - 2*delLG) .* gLG + (delGG - delLG) .* delLG .* gLG_d + fG_d    ];
+        
+    R1_t = [delLL .* (delGL - delLL) .* gLL_t + fL_t   ;...
+            delLG .* (delGG - delLG) .* gLG_t + fG_t   ];
+
+	R2_d = [(2*delGL - delLL) .* gGL + (delGL - delLL) .* delGL .* gGL_d + fL_d    ;...
+                        -delGG .* gGG + fG_d                          ];
+
+    R2_t = [delGL .* (delGL - delLL) .* gGL_t + fL_t   ;...
+            delGG .* (delGG - delLG) .* gGG_t + fG_t   ];
+
+    % Determinant
     DetR = R1_d .* R2_t - R1_t.*R2_d                                            ;
 
     % Final Newton Directions
@@ -297,36 +311,6 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
 
 end
 
-function [PhiRgivenL,PhiRgivenG] = HelmholtzHarvest(delL,delG,tauL,tauG,GivenL,GivenG)
-    
-    Nliquid = length(delL);
-    dels    = [delL;delG];
-    taus    = [tauL;tauG];
-    PhiR    = HelmholtzResidual(dels,taus);
-    
-    
-    PhiRgivenL.L
-    PhiRgivenL.L_d
-    PhiRgivenL.L_t
-    PhiRgivenL.L_dt
-    PhiRgivenL.L_dd
-    PhiRgivenL.G
-    PhiRgivenL.G_d
-    PhiRgivenL.G_t
-    PhiRgivenL.G_dt
-    PhiRgivenL.G_dd
-
-    PhiRgivenG.G
-    PhiRgivenG.G_d
-    PhiRgivenG.G_t
-    PhiRgivenG.G_dt
-    PhiRgivenG.G_dd
-    PhiRgivenG.L
-    PhiRgivenG.L_d
-    PhiRgivenG.L_t
-    PhiRgivenG.L_dt
-    PhiRgivenG.L_dd
-end
 
 
 
