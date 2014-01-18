@@ -1,24 +1,19 @@
-function Pnd_tauSat = ClausiusClapeyronRRND(Psat,tauSat,delL,delG,il,ig)
-    
-    [R,rhoc,Tc] = Nondimensionalizers();
-    
+function Pnd_tauSat = ClausiusClapeyronRRND(Pnd,tauSat,delL,delG,iNDL,iNDG)
+
     % Latent internal energy - if not passed, it will be calculated.
     if (nargin < 5)
-        il  = InternalEnergyOneR(delL,tauSat);
-        ig  = InternalEnergyOneR(delG,tauSat);
+        iNDL  = InternalEnergyOneRND(delL,tauSat);
+        iNDG  = InternalEnergyOneRND(delG,tauSat);
     end
-    ilg = ig - il                        ;
-    
-    % Reduced density change
-    nulg = 1./delG - 1./delL;
+    iNDLG = iNDG - iNDL                        ;
 
     % Clausius–Clapeyron relation
-    Pnd_tauSat = -(ilg./nulg + Psat/rhoc) ./ (R * Tc * tauSat);    
-    
+    Pnd_tauSat = ( iNDLG ./ (1./delL - 1./delG) - Pnd) ./ tauSat;
+
     %   Standard form of the Clausius–Clapeyron relation:
     %       P_Tsat = hlg / (Tsat * vlg)
     %
     %   This form was not used because it is not dimensionless, and the form 
     %   above uses internal energies since it is less computationally intensive.
-    
+
 end

@@ -16,7 +16,8 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     % Ordering Masks: since the solution algorithm relies on the ordering of dels to be
     % [delL;delG], these index arrays allow insertion of the solved properties into the 
     % original ordering.
-    Ioriginal = 1 : length(delGiven);
+    Ngiven    = length(delGiven);
+    Ioriginal = 1 : Ngiven;
     Iordered  = [Ioriginal(GivenL),Ioriginal(GivenG)];
 
     % Given densities
@@ -25,8 +26,10 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     delGiven  = [delLgiven;delGgiven]   ; % destroys original ordering; use index arrays above
 
     % Number of gas densities given
-    NliquidGiven = length(delLgiven);
-
+    NgivenL = length(delLgiven) ;
+    NgivenG = Ngiven - NgivenL  ;
+    lGivenL = [ true(NgivenL,1);false(NgivenG,1)];
+    lGivenG = [false(NgivenL,1); true(NgivenG,1)];
 
 
     % ================================================================================== %
@@ -116,25 +119,15 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
         IterMax     = 500;
 
         % Full guess matrix
-        Guess = [[delGguess(1:NliquidGiven);delLguess(NliquidGiven+1:end)],...
-                   tauGuess(WillIterate)];
+        Guess = [[delGguess(1:NgivenL);delLguess(NgivenL+1:end)],...
+                   tauGuess(WillIterate),delGiven];
 
         % Update handle
-        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven);
+        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,NgivenL);
 
         % Newton solution
         Solution = NewtonUpdater(Updater,Guess,Tolerance,IterMax,true);
 
-        % Pull solved dels and taus
-        delGsol = Solution(WillIterate & GivenL,1);
-        delLsol = Solution(WillIterate & GivenG,1);
-        tauSol  = Solution(:,2);
-
-    else
-        % Initialize as empty
-        delGsol = [];
-        delLsol = [];
-        tauSol  = [];
     end
     
     % Allocations
@@ -142,10 +135,15 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     delL = delGiven;
     tau  = delGiven;
     
+    % Insert non-iterated guess values
+    delG(not(WillIterate) & lGivenL) = delGguess(not(WillIterate))   ;
+    delL(not(WillIterate) & lGivenG) = delLguess(not(WillIterate))   ;
+    tau (not(WillIterate))          = tauGuess (not(WillIterate))   ;
+    
     % Insert Newton solutions
-    delG(WillIterate & GivenL) = delGsol    ;
-    delL(WillIterate & GivenG) = delLsol    ;
-    tau (WillIterate)          = tauSol     ;
+    delG(WillIterate & lGivenL) = Solution(lGivenL,1)   ;
+    delL(WillIterate & lGivenG) = Solution(lGivenG,1)   ;
+    tau (WillIterate)           = Solution(   :   ,2)   ;
 
     % Insert Near Triple results
     delG(NearTriple) = delGnearT    ;
@@ -177,7 +175,7 @@ end
 
 
 
-function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
+function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,NliquidGiven)
 %
 %   This function provides the Newton updates for an unknown reduced density
 %   delUnknown and associated saturation temperature tauSat given the opposing reduced 
@@ -195,36 +193,25 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
 %
     
     % Pull unknowns
-    dels = Unknowns(:,1);
-    taus = Unknowns(:,2);
+    dels     = Unknowns(:,1)    ;
+    taus     = Unknowns(:,2)    ;
+    delGiven = Unknowns(:,3)    ;
     
-    % Logical masks for delGiven
-    lGivenL = (Mask <= NliquidGiven)  ; % liquid density given
-    lGivenG = not(lGivenL)            ; % gas    density given
-    
-    % Integer masks for the Unknowns:
-    %       These are different from the delGiven masks since the Unknowns are returned 
-    %       to this function already contracted (i.e., masked).
-    %
-    Nmask   = length(Mask)      ; % Number of unconverged values
-    NgivenL = sum(lGivenL)      ; % number of liquid knowns remaining
-    NgivenG = Nmask - NgivenL   ; % number of gas    knowns remaining
-    iGivenMaskL = Mask(lGivenL) ;
-    iGivenMaskG = Mask(lGivenG) ;
-    
-    NgivenLremain = sum(sum(lGivenL));
-    iUnknownMaskL = 1 : NgivenLremain;
-    iUnknownMaskG = (NgivenLremain + 1) : Nmask;
+    Nmask   = length(Mask)              ;
+    NgivenL = nnz(Mask <= NliquidGiven) ; % number of liquid knowns remaining
+    NgivenG = Nmask - NgivenL           ; % number of gas    knowns remaining
+    iMaskL  = 1 : NgivenL               ;
+    iMaskG  = (NgivenL + 1) : Nmask     ;
 
-    % Assign the Unknowns to descriptive variables
-    delLL = delGiven(iGivenMaskL)  ;
-    delGL = dels(iUnknownMaskL)      ;
-    tauLL = taus(iUnknownMaskL)      ;
+    % Assign values for liquid-given equations
+    delLL = delGiven(iMaskL)    ;
+    delGL = dels    (iMaskL)    ;
+    tauLL = taus    (iMaskL)    ;
 
-    % Pull delGiven for unconverged Unknowns
-    delLG = dels(iGivenMaskG)      ;
-    delGG = delGiven(iUnknownMaskG)  ;
-    tauGG = taus(iUnknownMaskG)      ;
+    % Assign values for gas-given equations
+    delLG = dels    (iMaskG)    ;
+    delGG = delGiven(iMaskG)    ;
+    tauGG = taus    (iMaskG)    ;
 
     % Integer masks for vectorized Helmholtz functions:
     %       The most expensive evaluation in almost all of these thermodynamic calls is 
@@ -306,9 +293,9 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
     dtau  =  (R2 .* R1_d - R1 .* R2_d) ./ DetR ;
 
     % Final outputs
-    dUnknowns = [ddel,dtau]         ;
+    dUnknowns = [ddel,dtau,0*ddel]  ;
     RNorm     = abs(R1) + abs(R2)   ; % L_1 norm
-
+    
 end
 
 

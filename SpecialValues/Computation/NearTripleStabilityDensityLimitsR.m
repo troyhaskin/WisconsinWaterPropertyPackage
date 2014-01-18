@@ -3,6 +3,6 @@ function [delL,delG] = NearTripleStabilityDensityLimitsR()
     %   density.  As such, this limit is used in algorithms where this may cause issues;
     %   the method of resolving those issues is left to the caller.
 
-    delL = 3.1049457143789; % A shift of 5E-12 below the critical reduce density
+    delL = 3.1049457143789; % A shift of 5E-12 below the critical reduced density
     delG = 0.0            ; 
 end
