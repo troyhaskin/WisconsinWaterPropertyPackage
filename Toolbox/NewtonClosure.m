@@ -1,18 +1,20 @@
-function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
+function [xSol,Results] = NewtonClosure(Updater,Guess,Tolerance,MaxIter)
     
     % ======================================================================= %
     %                                   Set-Up                                %
     % ======================================================================= %
-    xSol            = 0 * Guess             ;
-    xk              = Guess                 ;
-    N               = size(Guess,1)         ;
-    Converged       = false(N,1)            ;
-    NotConverged    = not(Converged)        ;
-    Iupdate         = (1:N)'                ;
-    Iupdate         = Iupdate(NotConverged) ;
-    SumErr          = xSol                  ;
-    Iter            = 0                     ;
-    alpha           = 0.5                   ; % Back-tracking relaxor
+    
+    % Initialize
+    xSol    = 0 * Guess     ;
+    xk      = Guess         ;
+    N       = size(Guess,1) ;
+    Iupdate = (1:N)'        ;
+    SumErr  = xSol          ;
+    Iter    = 0             ;
+    alpha   = 0.1           ; % Back-tracking relaxor
+    
+    % Pull residual and residual derivative handles from the Updater
+    
     
     
     
@@ -21,13 +23,14 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
     % ======================================================================= %
     
     % Evaluate
-    [dxNow,Rbest]      = Update(xk,Iupdate)    ; % First update and norm
+    Rbest = Updater.GetResidual(xk);
     
     % Convergence check: Residual ONLY.
     Converged       = abs(Rbest) < Tolerance;
     NotConverged    = not(Converged)        ;
     NotDone         = any(NotConverged)     ;
     Ipush           = Iupdate(Converged)	;
+    Rbest           = Rbest(NotConverged)   ;
     xSol(Ipush,:)   = xk(Converged,:)       ;
     
     % Contract the unconverged values
@@ -42,26 +45,33 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
     % ======================================================================= %
     while NotDone
         
-        % Update the system with full Newton step
-        [dxNext,Rnew] = Update(xk - dxNow,Iupdate) ;
+        % Calculate the full Newton step
+        Updater.SetFilter(Iupdate)          ;
+        dRbest = Updater.GetDResidual(xk)   ;
+        dx  = Rbest./dRbest                 ;
+        
+        % Get the new residual from the full step
+        Rnew = Updater.GetResidual(xk - dx) ;
         
         % Back-track if needed by the following criteria
-        NeedBackTrack = (Rbest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2);
+        NeedBackTrack = (abs(Rbest) < abs(Rnew)) | isnan(Rnew);
         
         % Back-tracker loop
         if any(NeedBackTrack)
-            g = FilterList(NeedBackTrack,xk,dxNow,Iupdate,Rbest);
-            [dxNow,dxNext,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Update),...
-                NeedBackTrack,dxNow,dxNext,Rnew);
+            g = FilterList(NeedBackTrack,xk,dx,Iupdate,Rbest);
+            [dx,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Updater),...
+                NeedBackTrack,dx,Rnew);
+            
+            % Restore the closure's pre-back track filter
+            Updater.SetFilter(Iupdate);
         end
         
         % Set new values
-        Rbest = Rnew        ;
-        xkp1  = xk - dxNow  ;
-        dxNow = dxNext      ;
+        Rbest = Rnew    ;
+        xkp1  = xk - dx ;
         
         % Post-update loop-breaking checks
-        Converged       = ConvergenceTest(dxNow,Rbest,Tolerance) ;
+        Converged       = ConvergenceTest(dx,Rbest,Tolerance) ;
         NotConverged    = not(Converged)                      ;
         BelowIterMax    = Iter < MaxIter                      ;
         Iter            = Iter + 1                            ;
@@ -72,32 +82,38 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         xSol(Ipush,:) = xkp1(Converged,:)       ;
         
         % Contract the unconverged values
-        Iupdate     = Iupdate(NotConverged)     ;
-        xk          = xkp1(NotConverged,:)      ;
-        SumErr      = SumErr(NotConverged,:)    ;
+        Iupdate = Iupdate(NotConverged)     ;
+        xk      = xkp1(NotConverged,:)      ;
+        Rbest   = Rbest(NotConverged,:)     ;
+        SumErr  = SumErr(NotConverged,:)    ;
     end
+    
+    Results = Updater.Finalize(xSol);
     
 end
 
-function [dxNow,dxNext,Rnew] = BackTracker(xk,dxNow,Iupdate,Rbest,alpha,Update)
+function [dx,Rnew] = BackTracker(xk,dx,Iupdate,Rbest,alpha,Updater)
+    
+    % Update the closure's filter
+    Updater.SetFilter(Iupdate);
     
     % First relaxation
-    dxNow         = alpha * dxNow               ;
-    [dxNext,Rnew]  = Update(xk - dxNow,Iupdate) ;
-    NeedBackTrack = Rbest < Rnew                ;
+    dx            = alpha * dx                                  ;
+    Rnew          = Updater.GetResidual(xk - dx)                ;
+    NeedBackTrack = (abs(Rbest) < abs(Rnew))& (xk ~= (xk - dx)) ;
     
     % Back-tracking loop (via recursion)
     if any(NeedBackTrack)
-        g = FilterList(NeedBackTrack,xk,dxNow,Iupdate,Rbest);
-        [dxNow,dxNext,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Update),...
-            NeedBackTrack,dxNow,dxNext,Rnew);
+        g = FilterList(NeedBackTrack,xk,dx,Iupdate,Rbest);
+        [dx,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Updater),...
+            NeedBackTrack,dx,Rnew);
     end
 end
 
 function Converged = ConvergenceTest(dx,Norm,Tolerance)
-    IsZero      = abs(Norm)   < Tolerance           ;
-    WontMove    = any(abs(sum(dx,2)) < Tolerance)   ;
-    IsNaN       = any(isnan(dx),2) | isnan(Norm)    ;
+    IsZero      = abs(Norm)      < Tolerance        ;
+    WontMove    = abs(sum(dx,2)) < Tolerance        ;
+    IsNaN       = isnan(dx)      | isnan(Norm)      ;
     IsInf       = not(isfinite(Norm))               ;
     Converged	= IsZero | IsNaN | IsInf | WontMove ;
 end

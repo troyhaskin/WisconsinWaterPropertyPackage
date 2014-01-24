@@ -1,37 +1,40 @@
-function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tauSat,delL0,delG0,UniqueMask)
+function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMask)
     
-    [tauSat,SizeTsat] = Columnify(tauSat);
+    [tau,SizeTsat] = Columnify(tau);
     
     % Uniqueness filter; if a UniqueMask is passed; tauSat is assumed to have unique entries.
     if (nargin < 4) || isempty(UniqueMask)
-        [tauSat,~,UniqueMask] = unique(tauSat);
+        [tau,~,UniqueMask] = unique(tau);
     end
     
     % Reduced liquid density guess value
     if (nargin < 2) || isempty(delL0)
-        delL  = EstimateDelLFromTau(tauSat);
+        delL  = EstimateDelLFromTau(tau);
     else
         delL = delL0;
     end
     
     % Reduced gas density guess value
     if (nargin < 3) || isempty(delG0)
-        delG  =  EstimateDelGFromTau(tauSat);
+        delG  =  EstimateDelGFromTau(tau);
     else
         delG = delG0;
     end
 
-
-    % Check Tsat for how close to critical it is
-    NearTc  = tauSat < DoNoIterationValueReducedTemperature()  ; 
-    AboveTc = tauSat <   1                                     ; % Check if Tsat is above the critical point
+    % Check tau for how close to critical it is
+    NearTc     = tau < DoNoIterationTau()   ; 
+    AboveTc    = tau <   1                  ;   % Check if Tsat is above the critical point
+    AboveTt    = tau < TriplePointTau()     ;
+    NotAboveTc = not(AboveTc)               ; 
+    BelowTt    = not(AboveTt)               ;
+    
 
     % Iteration setup
-    Tolerance = 1E-12                                       ; % Abolsute iteration tolerance
-    IterMax   = 1E3                                         ; % Maximum iteration count
-    Calculate = not(NearTc) & not(AboveTc)                  ; % Mask for temps. not close to the critical point
-    Guess     = [delL(Calculate),delG(Calculate)]           ; % Starting values for the iteration
-    UpdateFun = @(x,Mask) Updater(x,Mask,tauSat(Calculate))    ; % Function used for updating the solution
+    Tolerance = 1E-12                                   ; % Abolsute iteration tolerance
+    IterMax   = 1E3                                     ; % Maximum iteration count
+    Calculate = not(NearTc) & NotAboveTc & AboveTt      ; % Mask for temps. not close to the critical point
+    Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
+    UpdateFun = @(x,Mask) Updater(x,Mask,tau(Calculate)); % Function used for updating the solution
     
     % Solve the system
     if any(Calculate)
@@ -45,17 +48,24 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tauSat,delL0,delG0,Unique
     
     % These values above for T above the vapor dome ensure that the fluid will
     % be flagged as single phase.
-    delL(AboveTc) = 0.0;
-    delG(AboveTc) = 1.0;
+    delL(AboveTc | BelowTt) = 0.0;
+    delG(AboveTc | BelowTt) = 0.0;
+    
+    % If exactly critical, assign exact values
+    delL(tau == 1) = 1;
+    delG(tau == 1) = 1;
+    
+    % Saturation pressure
+    Pnd             = delG                                              ; % allocate
+    Pnd(NotAboveTc) = PressureOneRND(delL(NotAboveTc),tau(NotAboveTc))  ;
+    Pnd(tau == 1)   = CriticalPressureND()                              ;
+    Pnd(AboveTc | BelowTt) = 0                                          ;
     
     % Expand vectors back to non-unique lengths
-    tauSat = tauSat(UniqueMask) ;
-    delL   = delL  (UniqueMask) ;
-    delG   = delG  (UniqueMask) ;
-    
-    % Calculate the saturation pressure
-    Pnd = PressureOneRND(delG,tauSat);
-    
+    Pnd  = Pnd (UniqueMask) ;
+    delL = delL(UniqueMask) ;
+    delG = delG(UniqueMask) ;
+
     % Reshape to input shape
     Pnd  = RestoreShape(Pnd,SizeTsat);
     delL = RestoreShape(delL,SizeTsat);
