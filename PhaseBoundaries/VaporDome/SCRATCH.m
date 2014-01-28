@@ -1,7 +1,16 @@
-function [a,b,c] = SCRATCH(d)
+function Closure = SCRATCH()
 
-    a = 1*d     ;
-    b = 2*d     ;
-    c = 3*d     ;
+    a = 1;
+    
+    Closure.set = @(x) set(x);
+    Closure.get = @()  get();
+    
+    function [] = set(x)
+        a = x;
+    end
+    
+    function x = get()
+        x = a;
+    end
 
 end

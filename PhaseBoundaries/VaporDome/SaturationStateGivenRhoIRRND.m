@@ -1,15 +1,14 @@
 function varargout = SaturationStateGivenRhoIRRND(del,iND,varargin)
     
-    [~,tauGuess,~,~] = SaturationStateGivenDelta(del);
+    [~,tauGuess,~,~] = SaturationStateGivenDeltaRRND(del);
     
     % Iteration Setup
-    Updater   = MakeClosure(del,iND)    ;
     Guess     = tauGuess                ;
     IterMax   = 1E3                     ;
     Tolerance = 1E-12                   ;
     
     % Newton iterations
-    [tau,Results] = NewtonClosure(Updater,Guess,Tolerance,IterMax);
+    [tau,Results] = NewtonClosure(@() MakeClosure(del,iND),Guess,Tolerance,IterMax);
     
     % Extract output values
     Pnd  = Results.Pnd;
@@ -83,7 +82,7 @@ function Closure = MakeClosure(del,iND)
         % Phase determination
         CannotSaturate = (   0  == Pnd_ )   ;     % Indicates it cannot saturate
         NotSaturated   = ( del_ < delG_ )   | ... % Super-heated gas
-            ( del_ > delL_ )   ;     % Sub-cooled liquid
+                         ( del_ > delL_ )   ;     % Sub-cooled liquid
         OnePhase       = CannotSaturate | NotSaturated  ;
         TwoPhase       = not(OnePhase)                  ;
         
@@ -99,10 +98,10 @@ function Closure = MakeClosure(del,iND)
         
         if any(TwoPhase)
             
-            [delL2,tau2] = FilterList([TwoPhase;TwoPhase],[delL_;delG_],[tau;tau]);
+            [del2,tau2] = FilterList([TwoPhase;TwoPhase],[delL_;delG_],[tau;tau]);
             
             % Latent Internal Energy
-            iLandG = InternalEnergyOneRND(delL2,tau2);
+            iLandG = InternalEnergyOneRND(del2,tau2);
             iL_     = iLandG(1:(end/2));
             iG_     = iLandG(end/2+1:end);
             iLG_    = iG_ - iL_;
@@ -160,14 +159,6 @@ function Closure = MakeClosure(del,iND)
             tauLandG = [tau2;tau2];
             FilterL  = 1:length(delL2);
             FilterG  = length(delL2)+1 : 2*length(delL2);
-            
-            % Latent Internal Energy
-            if (numel(iL_) ~= numel(Pnd2))
-                iLandG = InternalEnergyOneRND(delLandG,tauLandG);
-                iL_     = iLandG(FilterL);
-                iG_     = iLandG(FilterG);
-                iLG_    = iG_ - iL_;
-            end
             
             % Helmholtz calls
             PhiRLG_d  = HelmholtzResidual_d (delLandG,tauLandG);

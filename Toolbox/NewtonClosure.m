@@ -1,4 +1,4 @@
-function [xSol,Results] = NewtonClosure(Updater,Guess,Tolerance,MaxIter)
+function [xSol,Results] = NewtonClosure(ClosureConstructor,Guess,Tolerance,MaxIter)
     
     % ======================================================================= %
     %                                   Set-Up                                %
@@ -13,24 +13,21 @@ function [xSol,Results] = NewtonClosure(Updater,Guess,Tolerance,MaxIter)
     Iter    = 0             ;
     alpha   = 0.1           ; % Back-tracking relaxor
     
-    % Pull residual and residual derivative handles from the Updater
-    
-    
-    
-    
+    % Create closures
+    UpdateMain = ClosureConstructor();  % Used in the outer loop for Newton updating
+    UpdateBack = ClosureConstructor();  % Used in the inner loop for back-tracking
+
+
+
     % ======================================================================= %
     %     Pre-loop: check for already converged solution (just in case)       %
     % ======================================================================= %
     
-    % Evaluate
-    Rbest = Updater.GetResidual(xk);
-    
-    % Convergence check: Residual ONLY.
-    Converged       = abs(Rbest) < Tolerance;
+    % Loop vectors allocation
+    Converged       = false(N,1)            ;
     NotConverged    = not(Converged)        ;
     NotDone         = any(NotConverged)     ;
     Ipush           = Iupdate(Converged)	;
-    Rbest           = Rbest(NotConverged)   ;
     xSol(Ipush,:)   = xk(Converged,:)       ;
     
     % Contract the unconverged values
@@ -46,28 +43,25 @@ function [xSol,Results] = NewtonClosure(Updater,Guess,Tolerance,MaxIter)
     while NotDone
         
         % Calculate the full Newton step
-        Updater.SetFilter(Iupdate)          ;
-        dRbest = Updater.GetDResidual(xk)   ;
-        dx  = Rbest./dRbest                 ;
+        UpdateMain.SetFilter(Iupdate)       ;
+        Rbest  = UpdateMain.GetResidual(xk) ;
+        dRbest = UpdateMain.GetDResidual(xk);
+        dx     = Rbest./dRbest              ;
         
         % Get the new residual from the full step
-        Rnew = Updater.GetResidual(xk - dx) ;
+        Rnew = UpdateMain.GetResidual(xk - dx) ;
         
         % Back-track if needed by the following criteria
         NeedBackTrack = (abs(Rbest) < abs(Rnew)) | isnan(Rnew);
         
         % Back-tracker loop
         if any(NeedBackTrack)
-            g = FilterList(NeedBackTrack,xk,dx,Iupdate,Rbest);
-            [dx,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Updater),...
-                NeedBackTrack,dx,Rnew);
-            
-            % Restore the closure's pre-back track filter
-            Updater.SetFilter(Iupdate);
+            g  = FilterList(NeedBackTrack,xk,dx,Iupdate,Rbest);
+            dx = AssignWithFilter(@() BackTracker(g{:},alpha,UpdateBack),...
+                NeedBackTrack,dx);
         end
         
         % Set new values
-        Rbest = Rnew    ;
         xkp1  = xk - dx ;
         
         % Post-update loop-breaking checks
@@ -84,29 +78,28 @@ function [xSol,Results] = NewtonClosure(Updater,Guess,Tolerance,MaxIter)
         % Contract the unconverged values
         Iupdate = Iupdate(NotConverged)     ;
         xk      = xkp1(NotConverged,:)      ;
-        Rbest   = Rbest(NotConverged,:)     ;
         SumErr  = SumErr(NotConverged,:)    ;
     end
     
-    Results = Updater.Finalize(xSol);
+    Results = UpdateMain.Finalize(xSol);
     
 end
 
-function [dx,Rnew] = BackTracker(xk,dx,Iupdate,Rbest,alpha,Updater)
+function dx = BackTracker(xk,dx,Iupdate,Rbest,alpha,Update)
     
     % Update the closure's filter
-    Updater.SetFilter(Iupdate);
+    Update.SetFilter(Iupdate);
     
     % First relaxation
     dx            = alpha * dx                                  ;
-    Rnew          = Updater.GetResidual(xk - dx)                ;
+    Rnew          = Update.GetResidual(xk - dx)                ;
     NeedBackTrack = (abs(Rbest) < abs(Rnew))& (xk ~= (xk - dx)) ;
     
     % Back-tracking loop (via recursion)
     if any(NeedBackTrack)
-        g = FilterList(NeedBackTrack,xk,dx,Iupdate,Rbest);
-        [dx,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Updater),...
-            NeedBackTrack,dx,Rnew);
+        g  = FilterList(NeedBackTrack,xk,dx,Iupdate,Rbest);
+        dx = AssignWithFilter(@() BackTracker(g{:},alpha,Update),...
+            NeedBackTrack,dx);
     end
 end
 

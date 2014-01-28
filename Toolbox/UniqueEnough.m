@@ -20,7 +20,7 @@ function [Uniques,iUniques,iVector] = UniqueEnough(Vector,AbsoluteTolerance)
         TestValue = Uniques(k);
         
         %   Form the logical comparison mask against remaining uniques
-        IsUniqueEnough = abs(TestValue - Uniques) < AbsoluteTolerance;
+        IsUniqueEnough = abs(TestValue - Uniques) <= AbsoluteTolerance;
 
 
         %   Tests for infinites (Inf is considered unique of -Inf) and not-a-numbers
@@ -58,12 +58,11 @@ function [Uniques,iUniques,iVector] = UniqueEnough(Vector,AbsoluteTolerance)
 
         %   If the current index of Vector being checked is the last index, the 
         %   loop is ended. Otherwise, the counter is incremented and we iterate.
-        if iUniques(k) < N
+        if (iUniques(k) < N) && (k < length(Uniques))
             k = k + 1;
         else
             NotDone = false;
         end
-
 
     end
 

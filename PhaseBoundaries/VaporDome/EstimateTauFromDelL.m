@@ -2,7 +2,7 @@ function tau = EstimateTauFromDelL(delL)
     
     %   A collection of brute-force polynomial fits that returns an estimate of
     %   the inverse, reduced temperature.  The fits are made from solving the 
-    %   full equilibrium system are are intended as guess values when density
+    %   full equilibrium system and are intended as guess values when density
     %   is the provided saturation value for solving the system.
     %
     %   The fits are in four zones:
@@ -16,7 +16,7 @@ function tau = EstimateTauFromDelL(delL)
     %           for more accuracy and lower oscillations as the curve begins
     %           to turn over.
     %     3.)   Zone 3 runs from 450K to 644K, where the break is made such that
-    %           hig accuracy near the critical point can be made.
+    %           high accuracy near the critical point can be made.
     %     4.)   Zone 4 runs from 644K to 1.00001*647.096K and offers a good approximation
     %           of tau almost near the critical point.
     %     5.)   Zone 5 run from 1.00001*647.096K to 647.096 and offers a good approximation

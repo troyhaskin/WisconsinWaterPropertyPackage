@@ -118,7 +118,7 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
         Tolerance   = 1E-10;
         IterMax     = 500;
 
-        % Full guess matrix
+        % Fill guess matrix
         Guess = [[delGguess(1:NgivenL);delLguess(NgivenL+1:end)],...
                    tauGuess(WillIterate),delGiven];
 
@@ -138,11 +138,11 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     % Insert non-iterated guess values
     delG(not(WillIterate) & lGivenL) = delGguess(not(WillIterate))   ;
     delL(not(WillIterate) & lGivenG) = delLguess(not(WillIterate))   ;
-    tau (not(WillIterate))          = tauGuess (not(WillIterate))   ;
+    tau (not(WillIterate))           = tauGuess (not(WillIterate))   ;
     
     % Insert Newton solutions
-    delG(WillIterate & lGivenL) = Solution(lGivenL,1)   ;
     delL(WillIterate & lGivenG) = Solution(lGivenG,1)   ;
+    delG(WillIterate & lGivenL) = Solution(lGivenL,1)   ;
     tau (WillIterate)           = Solution(   :   ,2)   ;
 
     % Insert Near Triple results
@@ -151,9 +151,9 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     tau (NearTriple) = tauAverage   ;
 
     % Undefinable quantities
-    delG(CannotSaturate) = NaN  ;
-    delL(CannotSaturate) = NaN  ;
-    tau (CannotSaturate) = NaN  ;
+    delG(CannotSaturate) = 0  ;
+    delL(CannotSaturate) = 0  ;
+    tau (CannotSaturate) = 0  ;
 
     % Put back into passed-in ordering
     delG(Iordered) = delG;

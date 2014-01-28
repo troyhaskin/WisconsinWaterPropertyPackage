@@ -22,16 +22,16 @@ function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
     tau (IsDelC) = 1    ;
     
     % Iteration parameters
-    Tolerance = 1E-13   ;
-    IterMax   = 1E3     ;
+    Tolerance = DefaultAbsoluteIterationTolerance() ;
+    IterMax   = DefaultMaximumIterationCount()      ;
     
     % Solve with liquid density
     if any(IsDelL)
-        tauL           = EstimateTauFromDelL(del(IsDelL));                 % Get initial guess
+        tauL = EstimateTauFromDelL(del(IsDelL));                 % Get initial guess
 
         if any(IterateL)
-            Updater = @(tau,Mask) GetTauFromDelL(tau,Mask,del(IterateL)); % Update handle
-            tauL    = NewtonUpdater(Updater,tauL,Tolerance,IterMax);   % Solve
+            Updater = @(t,Mask) GetTauFromDelL(t,Mask,del(IterateL)); % Update handle
+            tauL(IterateL(IsDelL)) = NewtonUpdater(Updater,tauL(IterateL(IsDelL)),Tolerance,IterMax);   % Solve
         end
 
         tau (IsDelL) = tauL    ; % Assign tau value
@@ -43,8 +43,8 @@ function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
         tauG = EstimateTauFromDelG(del(IsDelG));                 % Get initial guess
         
         if any(IterateG)
-            Updater = @(tau,Mask) GetTauFromDelG(tau,Mask,del(IterateG)); % Update handle
-            tauG    = NewtonUpdater(Updater,tauG,Tolerance,IterMax);   % Solve
+            Updater = @(t,Mask) GetTauFromDelG(t,Mask,del(IterateG)); % Update handle
+            tauG(IterateG(IsDelG))    = NewtonUpdater(Updater,tauG(IterateG(IsDelG)),Tolerance,IterMax);   % Solve
         end
 
         tau (IsDelG) = tauG    ; % Assign tau value
