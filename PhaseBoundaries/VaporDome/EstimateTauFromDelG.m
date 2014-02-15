@@ -2,7 +2,7 @@ function tau = EstimateTauFromDelG(delG)
     
     %   A collection of brute-force polynomial fits that returns an estimate of
     %   the inverse, reduced temperature.  The fits are made from solving the 
-    %   full equilibrium system are are intended as guess values when density
+    %   full equilibrium system and are intended as guess values when density
     %   is the provided saturation value for solving the system.
     %
     %   The fits are in fives zones where the divisions were somewhat arbitrary
@@ -15,7 +15,7 @@ function tau = EstimateTauFromDelG(delG)
     %       6.) 647.0895K - 647.096K
     
     %
-    delGTrip = 1.50763221266E-005;
+    delGTrip = 1.50763206189E-005;
     delG350K = 8.08349894630E-004;
     delG500K = 4.09903928885E-002;
     delG625K = 3.67361100488E-001;
@@ -24,13 +24,12 @@ function tau = EstimateTauFromDelG(delG)
     delGCrit = 1                 ;
     
     % Setup
-    [delG,SizeDelG] = Columnify(delG)           ; % Creates a column vector with a restore size
-    Zone1           = (delG >  delGTrip) & (delG <  delG350K);
-    Zone2           = (delG >  delG350K) & (delG <  delG500K);
-    Zone3           = (delG >  delG500K) & (delG <  delG625K);
-    Zone4           = (delG >  delG625K) & (delG <  delG640K);
-    Zone5           = (delG >  delG640K) & (delG <  delGNear);
-    Zone6           = (delG >  delGNear) & (delG <  delGCrit);
+    Zone1           = (delG >= delGTrip) & (delG <  delG350K);
+    Zone2           = (delG >= delG350K) & (delG <  delG500K);
+    Zone3           = (delG >= delG500K) & (delG <  delG625K);
+    Zone4           = (delG >= delG625K) & (delG <  delG640K);
+    Zone5           = (delG >= delG640K) & (delG <  delGNear);
+    Zone6           = (delG >= delGNear) & (delG <= delGCrit);
     
     tau        = delG * 0;
     tau(Zone1) = TauGuessZone1(delG(Zone1));
@@ -39,8 +38,7 @@ function tau = EstimateTauFromDelG(delG)
     tau(Zone4) = TauGuessZone4(delG(Zone4));
     tau(Zone5) = TauGuessZone5(delG(Zone5));
     tau(Zone6) = TauGuessZone6(delG(Zone6));
-    
-    tau = RestoreShape(tau,SizeDelG);
+
 end
 
 

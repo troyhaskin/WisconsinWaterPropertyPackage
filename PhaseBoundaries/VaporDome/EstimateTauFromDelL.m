@@ -32,10 +32,9 @@ function tau = EstimateTauFromDelL(delL)
     delLCrit = 1            ;
     
     % Setup
-    [delL,SizeDelL] = Columnify(delL)           ; % Creates a column vector with a restore size
     Zone1           =                      (delL >= delLTrip);
-    Zone2           = (delL <  delLTrip) & (delL >  delL450K);
-    Zone3           = (delL <  delL450K) & (delL >  delL644K);
+    Zone2           = (delL <  delLTrip) & (delL >= delL450K);
+    Zone3           = (delL <  delL450K) & (delL >= delL644K);
     Zone4           = (delL <  delL644K) & (delL >= delLNear);
     Zone5           = (delL <  delLNear) & (delL >= delLCrit);
     
@@ -46,7 +45,6 @@ function tau = EstimateTauFromDelL(delL)
     tau(Zone4) = TauGuessZone4(delL(Zone4));
     tau(Zone5) = TauGuessZone5(delL(Zone5));
     
-    tau = RestoreShape(tau,SizeDelL);
 end
 
 function tau = TauGuessZone1(delL)
