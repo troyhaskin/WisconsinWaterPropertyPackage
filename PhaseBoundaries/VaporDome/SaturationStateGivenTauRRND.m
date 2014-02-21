@@ -24,7 +24,7 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     % Check tau for how close to critical it is
     NearTc     = tau < DoNoIterationTau()   ; 
     AboveTc    = tau <   1                  ;   % Check if Tsat is above the critical point
-    AboveTt    = tau < TriplePointTau()     ;
+    AboveTt    = tau <= TriplePointTau()    ;
     NotAboveTc = not(AboveTc)               ; 
     BelowTt    = not(AboveTt)               ;
     

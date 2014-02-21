@@ -11,7 +11,7 @@
 %   EstimateDelLDelGTauFromDel() for delta values near the critical point. 
 %
 %   The tau values used will have the same upper bound for both deltaL and deltaG 
-%   (for simplicity) and will have the value of 1.0001.  This is several orders of magnitude
+%   (for simplicity) and will have the value of 1.00001.  This is several orders of magnitude
 %   great than the precision of the neighborhood above but was chosen so that the Estimation 
 %   algorithim will be robust (i.e., the critical point is completely removed from the 
 %   saturation calculation.
@@ -69,15 +69,15 @@ fprintf('\nOrder of polynomial: %G\n\n',OrderFit);
 % Reduced Liquid Fit Statistics
 fprintf('Reduced Liquid Fit:\n');
 fprintf('    Critical tau:\n');
-fprintf('        Value:          %+23.16E\n',tauLFit(1));
+fprintf('        Value:          %+23.16E\n'  ,tauLFit(1));
 fprintf('        Absolute Error: %+23.16E\n\n',tauLFit(1) - 1);
 fprintf('    Compared to Correlation:\n');
-fprintf('        L_1   Norm:      %+23.16E\n',norm(tauSampLCompare - tauLFit,1));
+fprintf('        L_1   Norm:      %+23.16E\n'  ,norm(tauSampLCompare - tauLFit,1));
 fprintf('        L_Inf Norm:      %+23.16E\n\n',norm(tauSampLCompare - tauLFit,Inf));
 % Reduced Liquid Fit Statistics
 fprintf('Reduced Gas Fit:\n');
 fprintf('    Critical tau:\n');
-fprintf('        Value:          %+23.16E\n',tauGFit(1));
+fprintf('        Value:          %+23.16E\n'  ,tauGFit(1));
 fprintf('        Absolute Error: %+23.16E\n\n',tauGFit(1) - 1);
 fprintf('    Compared to Correlation:\n');
 fprintf('        L_1   Norm:     %+23.16E\n',norm(tauSampGCompare - tauGFit,1));

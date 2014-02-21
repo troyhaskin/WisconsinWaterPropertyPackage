@@ -66,7 +66,6 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         BelowIterMax    = Iter < MaxIter                      ;
         Iter            = Iter + 1                            ;
         NotDone         = any(NotConverged) && BelowIterMax   ;
-        
         % Push converged values into the solution vector
         Ipush         = Iupdate(Converged)  ;
         xSol(Ipush,:) = xkp1(Converged,:)       ;
@@ -76,7 +75,7 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         xk          = xkp1(NotConverged,:)      ;
         SumErr      = SumErr(NotConverged,:)    ;
     end
-    
+
 end
 
 function [dxNow,dxNext,Rnew] = BackTracker(xk,dxNow,Iupdate,Rbest,alpha,Update)
