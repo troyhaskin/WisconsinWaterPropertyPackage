@@ -3,13 +3,13 @@ function [n_o,gamma_o] = HelmholtzIdealGas_Coefficients()
     %   These commented coefficients are the exact values from the IAPWS-95 
     %   reference.  The coefficients actually used have been adjusted to 
     %   yield exact 0s for the saturated liquid internal energy and entropy at
-    %   the triple point temperature.
+    %   the triple point.
     %
     %     n_o_Exact(1) = -8.3204464837497;
     %     n_o_Exact(2) =  6.6832105275932;
     %
-    n_o(1) = -8.320446483749734; % = n_o_Exact(1) + 3.4E-14
-    n_o(2) =  6.683210527593246; % = n_o_Exact(2) + 4.6E-14
+    n_o(1) = -8.320446483749715; % = n_o_Exact(1) - 1.5E-14
+    n_o(2) =  6.683210527593235; % = n_o_Exact(2) + 3.5E-14
     n_o(3) =  3.00632          ;
     n_o(4) =  0.012436         ;
     n_o(5) =  0.97315          ;

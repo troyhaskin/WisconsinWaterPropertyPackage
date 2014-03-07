@@ -21,7 +21,7 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
     % ======================================================================= %
     
     % Evaluate
-    [dxNow,Rbest]      = Update(xk,Iupdate)    ; % First update and norm
+    [dxNow,Rbest] = Update(xk,Iupdate)    ; % First update and norm
     
     % Convergence check: Residual ONLY.
     Converged       = abs(Rbest) < Tolerance;
@@ -46,7 +46,8 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         [dxNext,Rnew] = Update(xk - dxNow,Iupdate) ;
         
         % Back-track if needed by the following criteria
-        NeedBackTrack = (Rbest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2);
+        NeedBackTrack = (Rbest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2) | ...
+                              any(imag(dxNext)~=0,2) | any(imag(Rnew)~=0,2);
         
         % Back-tracker loop
         if any(NeedBackTrack)
@@ -83,7 +84,8 @@ function [dxNow,dxNext,Rnew] = BackTracker(xk,dxNow,Iupdate,Rbest,alpha,Update)
     % First relaxation
     dxNow         = alpha * dxNow               ;
     [dxNext,Rnew]  = Update(xk - dxNow,Iupdate) ;
-    NeedBackTrack = Rbest < Rnew                ;
+    NeedBackTrack = (Rbest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2) | ...
+                    any(imag(dxNext)~=0,2) | any(imag(Rnew)~=0,2);
     
     % Back-tracking loop (via recursion)
     if any(NeedBackTrack)
@@ -94,9 +96,9 @@ function [dxNow,dxNext,Rnew] = BackTracker(xk,dxNow,Iupdate,Rbest,alpha,Update)
 end
 
 function Converged = ConvergenceTest(dx,Norm,Tolerance)
-    IsZero      = abs(Norm)   < Tolerance           ;
+    IsZeroAbs   = abs(Norm)    < Tolerance          ;
     WontMove    = any(abs(sum(dx,2)) < Tolerance)   ;
     IsNaN       = any(isnan(dx),2) | isnan(Norm)    ;
     IsInf       = not(isfinite(Norm))               ;
-    Converged	= IsZero | IsNaN | IsInf | WontMove ;
+    Converged	= IsZeroAbs | IsNaN | IsInf | WontMove ;
 end

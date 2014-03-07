@@ -37,15 +37,15 @@ function HelmDeriv = HelmholtzResidual_d(delta,tau)
         m        = k - 51	;
         p        = k - 54	;
         
-        Theta       = GetTheta     (deltaMod,tau,A(p),betaInv(m))                          ;
-        Delta       = GetDelta     (deltaMod,Theta,B(p),a(p))                           ;
-        Psi         = GetPsi       (deltaMod,tau,C(p),D(p))                             ;
-        Psi_d       = GetPsi_d     (delta,Psi,C(p))                                     ;
+        Theta       = GetTheta     (deltaMod,tau,A(p),betaInv(m))                             ;
+        Delta       = GetDelta     (deltaMod,Theta,B(p),a(p))                                 ;
+        Psi         = GetPsi       (deltaMod,tau,C(p),D(p))                                   ;
+        Psi_d       = GetPsi_d     (delta,Psi,C(p))                                           ;
         Deltabi_d   = GetDeltabi_d (delta,deltaMod,Delta,Theta,A(p),B(p),a(p),b(p),betaInv(m));
         
         Part        =  Delta.^(b(p)) .* (Psi + delta .* Psi_d)  ;
         Part        = n(k)*(Part + Deltabi_d .* delta .* Psi)   ;
-        [HelmDeriv,SumErr] = KahanSum(HelmDeriv,Part,SumErr);
+        [HelmDeriv,SumErr] = KahanSum(HelmDeriv,Part,SumErr)    ;
     end
     
 end
