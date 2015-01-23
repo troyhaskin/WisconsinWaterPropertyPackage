@@ -31,8 +31,10 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
     xSol(Ipush,:)   = xk(Converged,:)       ;
     
     % Contract the unconverged values
+    Rbest       = Rbest(NotConverged)       ;
     Iupdate     = Iupdate(NotConverged)     ;
     xk          = xk(NotConverged,:)        ;
+    dxNow       = dxNow(NotConverged,:)     ;
     SumErr      = SumErr(NotConverged,:)    ;
     
     
@@ -52,8 +54,10 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         % Back-tracker loop
         if any(NeedBackTrack)
             g = FilterList(NeedBackTrack,xk,dxNow,Iupdate,Rbest);
-            [dxNow,dxNext,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Update),...
-                NeedBackTrack,dxNow,dxNext,Rnew);
+            [dxNowBT,dxNextBT,RnewBT] = Backtrack(g{:},Update,alpha);
+            dxNow (NeedBackTrack) = dxNowBT ;
+            dxNext(NeedBackTrack) = dxNextBT;
+            Rnew  (NeedBackTrack) = RnewBT  ;
         end
         
         % Set new values
@@ -72,33 +76,45 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         xSol(Ipush,:) = xkp1(Converged,:)       ;
         
         % Contract the unconverged values
+        Rbest       = Rbest  (NotConverged)     ;
         Iupdate     = Iupdate(NotConverged)     ;
-        xk          = xkp1(NotConverged,:)      ;
-        SumErr      = SumErr(NotConverged,:)    ;
+        xk          = xkp1   (NotConverged,:)   ;
+        dxNow       = dxNow  (NotConverged,:)   ;
+        SumErr      = SumErr (NotConverged,:)   ;
     end
+    
+    Ipush         = Iupdate(NotConverged)  ;
+    xSol(Ipush,:) = xk(NotConverged,:)     ;
 
 end
 
-function [dxNow,dxNext,Rnew] = BackTracker(xk,dxNow,Iupdate,Rbest,alpha,Update)
+function [dxNowBT,dxNextBT,RnewBT] = Backtrack(xk,dxNow,iUpdate,Rbest,Update,alpha)
+
+    dxNowBT  = xk;
+    dxNextBT = xk;
+    RnewBT   = xk;
+    iDone    = 1:length(xk);
     
-    % First relaxation
-    dxNow         = alpha * dxNow               ;
-    [dxNext,Rnew]  = Update(xk - dxNow,Iupdate) ;
-    NeedBackTrack = (Rbest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2) | ...
-                    any(imag(dxNext)~=0,2) | any(imag(Rnew)~=0,2);
+    while not(isempty(iUpdate))
+        dxNow         = alpha * dxNow               ;
+
+        [dxNext,Rnew] = Update(xk - dxNow,iUpdate)  ;
+        NeedBackTrack = (Rbest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2) | ...
+                        any(imag(dxNext)~=0,2) | any(imag(Rnew)~=0,2);
     
-    % Back-tracking loop (via recursion)
-    if any(NeedBackTrack)
-        g = FilterList(NeedBackTrack,xk,dxNow,Iupdate,Rbest);
-        [dxNow,dxNext,Rnew] = AssignWithFilter(@() BackTracker(g{:},alpha,Update),...
-            NeedBackTrack,dxNow,dxNext,Rnew);
+        iPush   = iDone(not(NeedBackTrack)) ;
+        iUpdate = iUpdate(NeedBackTrack)    ;
+        
+        dxNowBT(iPush)  = dxNow(iPush);
+        dxNextBT(iPush) = dxNext(iPush);
+        RnewBT(iPush)   = Rnew(iPush);
     end
 end
 
 function Converged = ConvergenceTest(dx,Norm,Tolerance)
-    IsZeroAbs   = abs(Norm)    < Tolerance          ;
-    WontMove    = any(abs(sum(dx,2)) < Tolerance)   ;
-    IsNaN       = any(isnan(dx),2) | isnan(Norm)    ;
-    IsInf       = not(isfinite(Norm))               ;
-    Converged	= IsZeroAbs | IsNaN | IsInf | WontMove ;
+    IsZeroAbs   = abs(Norm)     < Tolerance             ;
+    WontMove    = abs(sum(dx,2)) < Tolerance            ;
+    IsNaN       = any(isnan(dx),2) | isnan(Norm)        ;
+    IsInf       = not(isfinite(Norm))                   ;
+    Converged	= IsZeroAbs | IsNaN | IsInf | WontMove  ;
 end

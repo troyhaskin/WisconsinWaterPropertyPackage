@@ -28,11 +28,12 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     
     
     % Iteration setup
-    Tolerance = 1E-12                                   ; % Abolsute iteration tolerance
-    IterMax   = 1E3                                     ; % Maximum iteration count
+    Tolerance = 1E-14                                   ; % Abolsute iteration tolerance
+    IterMax   = 300                                     ; % Maximum iteration count
     Calculate = not(NearTc) & NotAboveTc & AboveTt      ; % Mask for temps. not close to the critical point
     Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
-    UpdateFun = @(x,Mask) Updater(x,Mask,tau(Calculate)); % Function used for updating the solution
+%     UpdateFun = @(x,Mask) Updater(x,Mask,tau(Calculate)); % Function used for updating the solution
+    UpdateFun = @(x,Mask) UpdaterConjugateGradient(x,Mask,tau(Calculate)); % Function used for updating the solution
     
     % Solve the system
     if any(Calculate)
@@ -117,6 +118,7 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     dx    = [ddelL,ddelG];
     RNorm = abs(R1) + abs(R2);
     
+    Show(max(RNorm));
 end
 
 % function [delL,delG] = UpdaterBroyden(delLk,delGk,tau)
@@ -165,5 +167,81 @@ end
 %     end
 %
 % end
+
+function [dx,RNorm] = UpdaterConjugateGradient(x,Mask,tau0)
+
+    N    = length(Mask);
+    tau  = [tau0(Mask);tau0(Mask)];
+    delL = x(:,1);
+    delG = x(:,2);
+    
+    
+    % Form Jacobian determinant and inverse
+    [PhiR,PhiR_d,PhiR_dd] = HelmholtzResidualCombo__d_dd([delL;delG],tau);
+    [PhiRL,PhiRG,PhiR_dL,PhiR_dG,PhiR_ddL,PhiR_ddG] = VectorChunk([PhiR;PhiR_d;PhiR_dd],N);
+    
+    Psig1    =  PhiRL - PhiRG + log(delL./delG) ;
+    Psig1_dL =   PhiR_dL + 1./delL              ;
+    Psig1_dG = -(PhiR_dG + 1./delG)             ;
+    
+    PdelL = 1 + delL.*PhiR_dL;
+    PdelG = 1 + delG.*PhiR_dG;
+    
+    PdelL_d = PhiR_dL + delL.*PhiR_ddL;
+    PdelG_d = PhiR_dG + delG.*PhiR_ddG;
+    
+    R1 = delG.*Psig1 - PdelL.*(delL-delG);
+    R2 = delL.*Psig1 - PdelG.*(delL-delG);
+    
+    R1_dL = delG.*Psig1_dL + (delG-delL).*PdelL_d - PdelL;
+    R1_dG = Psig1 + PdelL  + delG.*Psig1_dG;
+    
+    R2_dL = Psig1 - PdelG  + delL.*Psig1_dL;
+    R2_dG = delL.*Psig1_dG + (delG-delL).*PdelG_d + PdelG;
+    
+
+    % Conjugate gradient
+    rk1 = R1;
+    rk2 = R2;
+    
+    xk1 = 0 ;
+    xk2 = 0 ;
+    
+    pk1 = R1;
+    pk2 = R2;
+
+    % First Step
+    Ap1   = pk1 .* R1_dL + pk2 .* R1_dG;
+    Ap2   = pk1 .* R2_dL + pk2 .* R2_dG;
+    alpha = (rk1.^2 + rk2.^2)./(pk1 .* Ap1 + pk2 .* Ap2)   ;
+    xk1   = xk1 + alpha .* pk1;
+    xk2   = xk2 + alpha .* pk2;
+    rk1p  = rk1 - alpha .* Ap1;
+    rk2p  = rk2 - alpha .* Ap2;
+    beta = ( rk1p.^2 + rk2p.^2 ) / ( rk1.^2 + rk2.^2 );
+    pk1  = rk1p + beta * pk1;
+    pk2  = rk2p + beta * pk2;
+    
+    rk1 = rk1p;
+    rk2 = rk2p;
+    
+    % Second Step
+    Ap1   = pk1 .* R1_dL + pk2 .* R1_dG;
+    Ap2   = pk1 .* R2_dL + pk2 .* R2_dG;
+    alpha = (rk1.^2 + rk2.^2)./(pk1 .* Ap1 + pk2 .* Ap2)   ;
+    xk1   = xk1 + alpha .* pk1;
+    xk2   = xk2 + alpha .* pk2;
+    rk1   = rk1 - alpha .* Ap1;
+    rk2   = rk2 - alpha .* Ap2;
+%     beta = ( rk1p.^2 + rk2p.^2 ) / ( rk1.^2 + rk2.^2 );
+%     pk1  = rk1p + beta * pk1;
+%     pk2  = rk2p + beta * pk2;
+
+    
+    % Assign system solution
+    dx    = [xk1,xk2];
+    RNorm = abs(R1) + abs(R2);
+
+end
 
 

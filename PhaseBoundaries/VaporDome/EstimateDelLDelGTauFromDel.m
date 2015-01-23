@@ -20,7 +20,7 @@ function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
     tau (IsDelC) = 1    ;
     
     % Iteration parameters
-    Tolerance = 3E-16   ;   % Just above the FP precision limit of doubles
+    Tolerance = 1E-10   ;   % Just above the FP precision limit of doubles
     IterMax   = DefaultMaximumIterationCount()   ;
     
     % Solve with liquid density
