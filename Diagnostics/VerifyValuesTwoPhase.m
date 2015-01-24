@@ -1,4 +1,4 @@
-function [] = VerifyTwoPhaseValues(FileName)
+function [] = VerifyValuesTwoPhase(FileName)
     
     
     %                                Input Checking
@@ -58,13 +58,14 @@ function [] = VerifyTwoPhaseValues(FileName)
     [WWPP_P,WWPP_rhoL,WWPP_rhoG] = SaturationStateGivenTsat(Tsat);
     
     % Round the calculations to the SigFigs in the IAPWS Standard
-    WWPP_P    = SigFigRound(WWPP_P,9);
-    WWPP_rhoL = SigFigRound(WWPP_rhoL,9);
-    WWPP_rhoG = SigFigRound(WWPP_rhoG,9);
-    WWPP_hL   = SigFigRound(EnthalpyOne(WWPP_rhoL,Tsat),9);
-    WWPP_hG   = SigFigRound(EnthalpyOne(WWPP_rhoG,Tsat),9);
-    WWPP_sL   = SigFigRound(EntropyOne (WWPP_rhoL,Tsat),9);
-    WWPP_sG   = SigFigRound(EntropyOne (WWPP_rhoG,Tsat),9);
+    Nfigs     = 9;
+    WWPP_P    = SigFigRound(WWPP_P,Nfigs);
+    WWPP_rhoL = SigFigRound(WWPP_rhoL,Nfigs);
+    WWPP_rhoG = SigFigRound(WWPP_rhoG,Nfigs);
+    WWPP_hL   = SigFigRound(EnthalpyOne(WWPP_rhoL,Tsat),Nfigs);
+    WWPP_hG   = SigFigRound(EnthalpyOne(WWPP_rhoG,Tsat),Nfigs);
+    WWPP_sL   = SigFigRound(EntropyOne (WWPP_rhoL,Tsat),Nfigs);
+    WWPP_sG   = SigFigRound(EntropyOne (WWPP_rhoG,Tsat),Nfigs);
     WWPP      = [WWPP_P,WWPP_rhoL,WWPP_rhoG,WWPP_hL,WWPP_hG,WWPP_sL,WWPP_sG];
     
     % Absolute Differences

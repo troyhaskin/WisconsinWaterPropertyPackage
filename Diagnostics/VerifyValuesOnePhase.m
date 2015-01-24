@@ -1,4 +1,28 @@
-function [] = VerifySinglePhaseValues()
+function [] = VerifyValuesOnePhase(FileName)
+    
+    
+    %                                Input Checking
+    % ================================================================================
+    if (nargin > 0) && not(isempty(FileName)) && ischar(FileName)
+        OutputFileName  = [CallerDirectory(),FileName];
+        FileID          = fopen(OutputFileName,'w','native','UTF-8');
+        
+        if (FileID ~= -1)
+            Print = @(Format,varargin) fprintf(FileID,Format,varargin{:});
+        else
+            fprintf('\n');
+            warning('WWPP:VerifyTwoPhaseValues:UnableToOpenFile',...
+                ['**** The requested file could not be created, ',...
+                'so the verification is being output to the command window. ****']);
+            fprintf('\n');
+            Print = @(Format,varargin) fprintf(Format,varargin{:});
+        end
+    
+    else
+        Print = @(Format,varargin) fprintf(Format,varargin{:});
+        FileID = -1;
+    end
+
     
 % Data load and calculations
     FileNameSinglePhase = 'IAPWSCheckValues_OnePhase.csv';
@@ -33,10 +57,10 @@ function [] = VerifySinglePhaseValues()
     AbsDiff    = [T,rho,AbsDiff_P,AbsDiff_cv,AbsDiff_w,AbsDiff_s];
     
     % Relative Differences (w.r.t to IAPWS)
-    RelDiff_P  = AbsDiffP  ./ IAPWS_P    ;
-    RelDiff_cv = AbsDiffcv ./ IAPWS_cv   ;
-    RelDiff_w  = AbsDiffw  ./ IAPWS_w    ;
-    RelDiff_s  = AbsDiffs  ./ IAPWS_s    ;
+    RelDiff_P  = AbsDiff_P  ./ IAPWS_P    ;
+    RelDiff_cv = AbsDiff_cv ./ IAPWS_cv   ;
+    RelDiff_w  = AbsDiff_w  ./ IAPWS_w    ;
+    RelDiff_s  = AbsDiff_s  ./ IAPWS_s    ;
     RelDiff    = [T,rho,RelDiff_P,RelDiff_cv,RelDiff_w,RelDiff_s];
     
 % Table 1: IAPWS values
@@ -91,7 +115,7 @@ function [] = VerifySinglePhaseValues()
     % Manipulate data for printing
     Data = cell(Nsets,1);
     for k = 1:Nsets
-        Data{k} = [T(k),rho(k),AbsDiffP(k),AbsDiffcv(k),AbsDiffw(k),AbsDiffs(k)];
+        Data{k} = [T(k),rho(k),AbsDiff_P(k),AbsDiff_cv(k),AbsDiff_w(k),AbsDiff_s(k)];
     end
     
     % Write table
@@ -109,31 +133,38 @@ function [] = VerifySinglePhaseValues()
     % Manipulate data for printing
     Data = cell(Nsets,1);
     for k = 1:Nsets
-        Data{k} = [T(k),rho(k),RelDiffP(k),RelDiffcv(k),RelDiffw(k),RelDiffs(k)];
+        Data{k} = [T(k),rho(k),RelDiff_P(k),RelDiff_cv(k),RelDiff_w(k),RelDiff_s(k)];
     end
     
     % Write table
     WriteTable(Title,DataLine,Data,BufferSize);
     
-end
 
+    
+    fclose(FileID);
+    
+    
+    
+    
+    
+    
 % Subfunctions
 function [] = WriteTable(TitleLine,DataLine,Data,BufferSize)
     TopRule(BufferSize);
     WritePropertyHeaders(TitleLine);
     MiddleRule(BufferSize);
-    for k = 1:length(Data)
-        fprintf(DataLine,Data{k}(:));
+    for m = 1:length(Data)
+        Print(DataLine,Data{m}(:));
     end
     BottomRule(BufferSize);
 end
 
 
 function [] = WritePropertyHeaders(Title)
-    fprintf([GetCenteredString('State',28),repmat(' ',1,8)]);
-    fprintf([GetCenteredString(Title,80),'\n']);
-    fprintf([repmat('-',1,28),repmat(' ',1,8),repmat('-',1,80),'\n']);
-    fprintf(['   T [K]      rho[kg/m^3]  ',repmat(' ',1,10),...
+    Print([GetCenteredString('State',28),repmat(' ',1,8)]);
+    Print([GetCenteredString(Title,80),'\n']);
+    Print([repmat('-',1,28),repmat(' ',1,8),repmat('-',1,80),'\n']);
+    Print(['   T [K]      rho[kg/m^3]  ',repmat(' ',1,10),...
              '     P [Pa]           '               ,...
              ' Cv [J/kg-K]          '               ,...
              '  w [m/s]            '                ,...
@@ -142,15 +173,15 @@ end
 
 % ========================== Table rules ========================== 
     function [] = TopRule(BufferSize)
-        fprintf([repmat('=',1,BufferSize),'\n']);
+        Print([repmat('=',1,BufferSize),'\n']);
     end
     
     function [] = MiddleRule(BufferSize)
-        fprintf([repmat('-',1,BufferSize),'\n']);
+        Print([repmat('-',1,BufferSize),'\n']);
     end
     
     function [] = BottomRule(BufferSize)
-        fprintf([repmat('=',1,BufferSize),'\n']);
+        Print([repmat('=',1,BufferSize),'\n']);
     end
 
     function CenteredString = GetCenteredString(String,BufferSize)
@@ -162,3 +193,4 @@ end
                                    String               ,...
                           repmat(' ',1,LengthPadRight)  ];
     end
+end
