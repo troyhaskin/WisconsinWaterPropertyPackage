@@ -13,18 +13,16 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
 
     %  Phase Determination
     % -----------------------------------------------
-    switch(nargin == 6)
-        case false
-            % Perform the phase boundary check
-            if PhaseCheck
-                [Psat,delL,delG] = SaturationStateGivenTausat(tau);
-                TwoPhase = GetTwoPhaseMask(delta,delL,delG);
-            else
-                TwoPhase = false(Nstates,1);
-            end
-            
-        case true
-            % The TwoPhase mask has been passed in; skip phase boundary check.
+    if (nargin < 6)
+        % Perform the phase boundary check
+        if PhaseCheck
+            [Psat,delL,delG] = SaturationStateGivenTausat(tau);
+            TwoPhase = GetTwoPhaseMask(delta,delL,delG);
+        else
+            TwoPhase = false(Nstates,1);
+        end
+    else
+        % The TwoPhase mask has been passed in; skip phase boundary check.
     end
     OnePhase = not(TwoPhase);
     %   end: Phase Determination
