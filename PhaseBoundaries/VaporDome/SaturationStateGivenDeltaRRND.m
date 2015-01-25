@@ -212,6 +212,15 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,NliquidGiven)
     delLG = dels    (iMaskG)    ;
     delGG = delGiven(iMaskG)    ;
     tauGG = taus    (iMaskG)    ;
+    
+    % Since empty masks create row-empties, this ensures they are
+    % column-empties.
+    delLL = delLL(:);
+    delGL = delGL(:);
+    tauLL = tauLL(:);
+    delLG = delLG(:);
+    delGG = delGG(:);
+    tauGG = tauGG(:);
 
     % Integer masks for vectorized Helmholtz functions:
     %       The most expensive evaluation in almost all of these thermodynamic calls is 

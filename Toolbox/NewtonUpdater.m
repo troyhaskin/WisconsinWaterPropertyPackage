@@ -55,9 +55,9 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         if any(NeedBackTrack)
             g = FilterList(NeedBackTrack,xk,dxNow,Iupdate,Rbest);
             [dxNowBT,dxNextBT,RnewBT] = Backtrack(g{:},Update,alpha);
-            dxNow (NeedBackTrack) = dxNowBT ;
-            dxNext(NeedBackTrack) = dxNextBT;
-            Rnew  (NeedBackTrack) = RnewBT  ;
+            dxNow (NeedBackTrack,:) = dxNowBT ;
+            dxNext(NeedBackTrack,:) = dxNextBT;
+            Rnew  (NeedBackTrack,:) = RnewBT  ;
         end
         
         % Set new values
@@ -90,24 +90,31 @@ end
 
 function [dxNowBT,dxNextBT,RnewBT] = Backtrack(xk,dxNow,iUpdate,Rbest,Update,alpha)
 
-    dxNowBT  = xk;
-    dxNextBT = xk;
-    RnewBT   = xk;
-    iDone    = 1:length(xk);
+    dxNowBT  = xk           ;
+    dxNextBT = xk           ;
+    RnewBT   = Rbest        ;
+    iDone    = 1:size(xk,1) ;
     
-    while not(isempty(iUpdate))
+    while not(isempty(iUpdate)) && all(abs(dxNow(:))>0)
         dxNow         = alpha * dxNow               ;
 
         [dxNext,Rnew] = Update(xk - dxNow,iUpdate)  ;
+        
         NeedBackTrack = (Rbest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2) | ...
                         any(imag(dxNext)~=0,2) | any(imag(Rnew)~=0,2);
     
-        iPush   = iDone(not(NeedBackTrack)) ;
-        iUpdate = iUpdate(NeedBackTrack)    ;
+        isDone  = not(NeedBackTrack)    ;
+        iPush   = iDone(isDone)         ;
+        iUpdate = iUpdate(NeedBackTrack);
         
-        dxNowBT(iPush)  = dxNow(iPush);
-        dxNextBT(iPush) = dxNext(iPush);
-        RnewBT(iPush)   = Rnew(iPush);
+        dxNowBT (iPush,:) = dxNow(isDone,:)  ;
+        dxNextBT(iPush,:) = dxNext(isDone,:) ;
+        RnewBT  (iPush)   = Rnew(isDone)     ;
+
+        xk   (isDone,:) = [];
+        dxNow(isDone,:) = [];
+        Rbest(isDone)   = [];
+
     end
 end
 

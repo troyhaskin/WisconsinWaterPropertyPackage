@@ -26,7 +26,7 @@ function [T,varargout] = Temperature(rhoMix,iMix,Tguess,PhaseCheck)
         isat           = InternalEnergy(rhoMix,Tsat,false)   ; % Get isat
         BelowVaporDome = iMix < isat                         ;
 
-        if BelowVaporDome
+        if any(BelowVaporDome)
             [rhoLt,rhoGt] = TriplePointDensities()                  ;
             Quality       = QualityFromDensity(rhoMix,rhoLt,rhoGt)  ;
             [itL,itG]     = TriplePointInternalEnergies()           ;

@@ -4,18 +4,9 @@ function Psi = GenericTwoPhiProperty(rho,T,OnePhiHandle,TwoPhiOption,PhaseCheck)
         PhaseCheck = true;
     end
     
-    % -----------------------------------------------
-    % begin: Allocation and Setup
-    [~,rhoc,Tc] = Nondimensionalizers();
-    [rho,T]     = BalanceSizes(rho,T);
-    
-    % -----------------------------------------------
-    % begin: Reduce the Quantities
-    
-    tau   = Tc ./ T   ;
-    delta = rho / rhoc;
-    
-    % end: Reduce the Quantities
+    % Reduce
+    tau   = CriticalTemperature() ./ T  ;
+    delta = rho / CriticalDensity()     ;
 
     %	Call reduced core method
     Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck);

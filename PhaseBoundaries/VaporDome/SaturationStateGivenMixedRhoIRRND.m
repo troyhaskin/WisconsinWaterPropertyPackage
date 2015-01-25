@@ -37,7 +37,7 @@ function varargout = SaturationStateGivenMixedRhoIRRND(delMix,iNDmix,varargin)
     
     % If no tauSat is given for the delMix, calculate it.
     if isempty(tauSat)
-        [~,tauSat,~,~] = SaturationStateGivenDelta(delMix);
+        [~,tauSat,~,~] = SaturationStateGivenDeltaRRND(delMix);
     end
     
     % If no iSatND is given for the delMix, calculate it.

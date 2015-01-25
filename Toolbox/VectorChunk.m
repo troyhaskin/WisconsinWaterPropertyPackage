@@ -16,11 +16,11 @@ function varargout = VectorChunk(Vector,ChunkSize)
     
     if (Ncol == 1)
         Nvector = Nrow;
-        Empty   = zeros(1,0);
+        Empty   = zeros(0,1);
         
     else
         Nvector = Ncol;
-        Empty   = zeros(0,1);
+        Empty   = zeros(1,0);
         
     end
     
