@@ -1,4 +1,4 @@
-function [] = VerifyValuesTwoPhase(FileName)
+function [] = VerifyValues_TwoPhase(FileName)
     
     
     %                                Input Checking
@@ -29,7 +29,7 @@ function [] = VerifyValuesTwoPhase(FileName)
     % ================================================================================
     
     % CSV Import
-    FileName = [CurrentFileDirectory(),'IAPWSCheckValues_TwoPhase.csv'];
+    FileName = [CurrentFileDirectory(),'IAPWSValues_TwoPhase.csv'];
     Data     = importdata(FileName, ',', 1);
     
     % Number of data sets

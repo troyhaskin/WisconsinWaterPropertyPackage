@@ -120,7 +120,8 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
 
         % Fill guess matrix
         Guess = [[delGguess(1:NgivenL);delLguess(NgivenL+1:end)],...
-                   tauGuess(WillIterate),delGiven];
+                   tauGuess,delGiven];
+        Guess = Guess(WillIterate,:);
 
         % Update handle
         Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,NgivenL);
@@ -141,8 +142,8 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     tau (not(WillIterate))           = tauGuess (not(WillIterate))   ;
     
     % Insert Newton solutions
-    delL(WillIterate & lGivenG) = Solution(lGivenG,1)   ;
-    delG(WillIterate & lGivenL) = Solution(lGivenL,1)   ;
+    delL(WillIterate & lGivenG) = Solution(lGivenG(WillIterate),1)   ;
+    delG(WillIterate & lGivenL) = Solution(lGivenL(WillIterate),1)   ;
     tau (WillIterate)           = Solution(   :   ,2)   ;
 
     % Insert Near Triple results

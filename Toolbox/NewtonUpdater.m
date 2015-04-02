@@ -119,8 +119,8 @@ function [dxNowBT,dxNextBT,RnewBT] = Backtrack(xk,dxNow,iUpdate,Rbest,Update,alp
 end
 
 function Converged = ConvergenceTest(dx,Norm,Tolerance)
-    IsZeroAbs   = abs(Norm)     < Tolerance             ;
-    WontMove    = abs(sum(dx,2)) < Tolerance            ;
+    IsZeroAbs   = abs(Norm)           < Tolerance       ;
+    WontMove    = abs(sum(abs(dx),2)) < Tolerance       ;
     IsNaN       = any(isnan(dx),2) | isnan(Norm)        ;
     IsInf       = not(isfinite(Norm))                   ;
     Converged	= IsZeroAbs | IsNaN | IsInf | WontMove  ;

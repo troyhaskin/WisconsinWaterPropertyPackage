@@ -1,4 +1,4 @@
-function [] = VerifyValuesOnePhase(FileName)
+function [] = VerifyValues_OnePhase(FileName)
     
     
     %                                Input Checking
@@ -25,7 +25,7 @@ function [] = VerifyValuesOnePhase(FileName)
 
     
 % Data load and calculations
-    FileNameSinglePhase = 'IAPWSCheckValues_OnePhase.csv';
+    FileNameSinglePhase = 'IAPWSValues_OnePhase.csv';
     Data = importdata(FileNameSinglePhase, ',', 1);
     
     % Number of data sets
@@ -140,8 +140,9 @@ function [] = VerifyValuesOnePhase(FileName)
     WriteTable(Title,DataLine,Data,BufferSize);
     
 
-    
-    fclose(FileID);
+    if (FileID ~= -1)
+        fclose(FileID);
+    end
     
     
     
