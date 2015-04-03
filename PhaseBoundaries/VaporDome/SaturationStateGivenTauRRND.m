@@ -28,8 +28,8 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     
     
     % Iteration setup
-    Tolerance = DefaultAbsoluteIterationTolerance()     ; % Abolsute iteration tolerance
-    IterMax   = DefaultMaximumIterationCount()          ; % Maximum iteration count
+    Tolerance = 1E-14                                   ; % Abolsute iteration tolerance
+    IterMax   = 25                                      ; % Maximum iteration count
     Calculate = not(NearTc) & NotAboveTc & AboveTt      ; % Mask for temps. not close to the critical point
     Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
     UpdateFun = @(x,Mask) Updater(x,Mask,tau(Calculate)); % Function used for updating the solution
@@ -75,10 +75,11 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     delG = x(:,2);
     
     
-    % Form Jacobian determinant and inverse
+    %   Helmholtz Free Energy values
     [PhiR,PhiR_d,PhiR_dd] = HelmholtzResidualCombo__d_dd([delL;delG],tau);
     [PhiRL,PhiRG,PhiR_dL,PhiR_dG,PhiR_ddL,PhiR_ddG] = VectorChunk([PhiR;PhiR_d;PhiR_dd],N);
     
+    %   Terms used to form the residuals
     Psig1    =  PhiRL - PhiRG + log(delL./delG) ;
     Psig1_dL =   PhiR_dL + 1./delL              ;
     Psig1_dG = -(PhiR_dG + 1./delG)             ;
@@ -89,14 +90,19 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     PdelL_d = PhiR_dL + delL.*PhiR_ddL;
     PdelG_d = PhiR_dG + delG.*PhiR_ddG;
     
-    R1 = delG.*Psig1 - PdelL.*(delL-delG);
-    R2 = delL.*Psig1 - PdelG.*(delL-delG);
+    delLmG = (delL-delG);
     
-    R1_dL = delG.*Psig1_dL + (delG-delL).*PdelL_d - PdelL;
-    R1_dG = Psig1 + PdelL  + delG.*Psig1_dG;
+    
+    %   Residual and partial derivative values
+    R1 = delG.*Psig1 - PdelL.*delLmG;
+    R2 = delL.*Psig1 - PdelG.*delLmG;
+    
+    R1_dL = delG.*Psig1_dL - (delLmG.*PdelL_d + PdelL)  ;
+    R1_dG = Psig1 + delG.*Psig1_dG + PdelL              ;
     
     R2_dL = Psig1 - PdelG  + delL.*Psig1_dL;
-    R2_dG = delL.*Psig1_dG + (delG-delL).*PdelG_d + PdelG;
+    R2_dG = delL.*Psig1_dG - (delLmG.*PdelG_d - PdelG);
+
     
     % Determinant
     DetJ = R1_dL .* R2_dG - R1_dG .*R2_dL;
@@ -108,7 +114,6 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     iJ22 =  R1_dL ./ DetJ;
 
 
-
     % Newton updates
     ddelL = iJ11 .* R1 + iJ12 .* R2;
     ddelG = iJ21 .* R1 + iJ22 .* R2;
@@ -116,7 +121,6 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     % Pack updates and calculate norm for the Newton updater
     dx    = [ddelL,ddelG];
     RNorm = abs(R1) + abs(R2);
-    
-%     Show(max(RNorm));
+
 end
 

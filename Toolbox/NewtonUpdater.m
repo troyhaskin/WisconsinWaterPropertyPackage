@@ -106,6 +106,7 @@ function [dxNowBT,dxNextBT,RnewBT] = Backtrack(xk,dxNow,iUpdate,Rbest,Update,alp
         isDone  = not(NeedBackTrack)    ;
         iPush   = iDone(isDone)         ;
         iUpdate = iUpdate(NeedBackTrack);
+        iDone   = iDone(NeedBackTrack)  ;
         
         dxNowBT (iPush,:) = dxNow(isDone,:)  ;
         dxNextBT(iPush,:) = dxNext(isDone,:) ;
