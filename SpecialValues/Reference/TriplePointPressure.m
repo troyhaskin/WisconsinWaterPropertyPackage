@@ -1,4 +1,4 @@
 function Pt = TriplePointPressure()
     % Pre-calculated phase equilibria value using the Tt = TriplePointTemperature()
-    Pt = +6.1165478635650322E+002; %[Pa]
+    Pt = +6.11654766373804140E+02; %[Pa]
 end
