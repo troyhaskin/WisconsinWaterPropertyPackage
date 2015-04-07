@@ -1,12 +1,6 @@
 function HelmDeriv = HelmholtzResidual_t(delta,tau)
     
-    persistent c d t n alpha beta gamma epsilon A B C D a b
-    
-    if isempty(c)
-        [c,d,t,n]                   = HelmholtzResidual_Coefficients1();
-        [alpha,beta,gamma,epsilon]	= HelmholtzResidual_Coefficients2();
-        [A,B,C,D,a,b]               = HelmholtzResidual_Coefficients3();
-    end
+    [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
     
     betaInv   = 1./beta         ;
 	deltaMod  = (delta - 1).^2 + eps(delta)	;

@@ -63,7 +63,6 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         % Set new values
         Rbest = Rnew        ;
         xkp1  = xk - dxNow  ;
-        dxNow = dxNext      ;
         
         % Post-update loop-breaking checks
         Converged       = ConvergenceTest(dxNow,Rbest,Tolerance) ;
@@ -71,11 +70,13 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         BelowIterMax    = Iter < MaxIter                      ;
         Iter            = Iter + 1                            ;
         NotDone         = any(NotConverged) && BelowIterMax   ;
+
         % Push converged values into the solution vector
         Ipush         = Iupdate(Converged)  ;
         xSol(Ipush,:) = xkp1(Converged,:)       ;
         
         % Contract the unconverged values
+        dxNow       = dxNext                    ;
         Rbest       = Rbest  (NotConverged)     ;
         Iupdate     = Iupdate(NotConverged)     ;
         xk          = xkp1   (NotConverged,:)   ;

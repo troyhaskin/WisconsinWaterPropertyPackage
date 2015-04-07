@@ -1,10 +1,6 @@
 function HelmDeriv = HelmholtzIdealGas_tt(~,tau)
     
-    persistent n_o gamma_o
-    
-    if isempty(n_o)
-        [n_o,gamma_o] = HelmholtzIdealGas_Coefficients()    ;
-    end
+    [n_o,gamma_o] = Coefficients_HelmholtzIdealGas()    ;
     
     HelmDeriv   = - n_o(3) * tau.^(-2)  ;
     SumErr      = 0                     ;

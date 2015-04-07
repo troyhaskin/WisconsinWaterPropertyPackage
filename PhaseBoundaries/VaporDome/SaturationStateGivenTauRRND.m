@@ -28,7 +28,7 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     
     
     % Iteration setup
-    Tolerance = 1E-14                                   ; % Abolsute iteration tolerance
+    Tolerance = 1E-15                                   ; % Abolsute iteration tolerance
     IterMax   = 25                                      ; % Maximum iteration count
     Calculate = not(NearTc) & NotAboveTc & AboveTt      ; % Mask for temps. not close to the critical point
     Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration

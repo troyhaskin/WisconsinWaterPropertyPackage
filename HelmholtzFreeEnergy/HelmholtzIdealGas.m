@@ -1,10 +1,6 @@
 function Helm = HelmholtzIdealGas(delta,tau)
     
-    persistent n_o gamma_o
-    
-    if isempty(n_o)
-        [n_o,gamma_o] = HelmholtzIdealGas_Coefficients()    ;
-    end
+    [n_o,gamma_o] = Coefficients_HelmholtzIdealGas()    ;
     
     Helm    = log(delta)    ;
     SumErr  = 0             ;

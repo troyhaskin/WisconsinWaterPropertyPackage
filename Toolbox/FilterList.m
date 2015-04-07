@@ -1,7 +1,7 @@
-function varargout = FilterList(PredOrMask,varargin)
+function varargout = FilterList(PredicateOrMask,varargin)
     
     Nfiltered = length(varargin);
-    Filtered  = cellfun( @(v) v(PredOrMask,:),varargin,'UniformOutput',false);
+    Filtered  = cellfun( @(v) v(PredicateOrMask,:),varargin,'UniformOutput',false);
     
     
     if (nargout >= Nfiltered)
