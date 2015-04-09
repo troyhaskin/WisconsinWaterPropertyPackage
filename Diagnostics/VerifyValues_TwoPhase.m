@@ -55,7 +55,7 @@ function [] = VerifyValues_TwoPhase(FileName)
     % ================================================================================
     
     % Package calculations
-    [WWPP_P,WWPP_rhoL,WWPP_rhoG] = SaturationStateGivenTsat(Tsat);
+    [WWPP_P,WWPP_rhoL,WWPP_rhoG] = SaturationStateGivenTemperature(Tsat);
     
     % Round the calculations to the SigFigs in the IAPWS Standard
     Nfigs     = 9;
