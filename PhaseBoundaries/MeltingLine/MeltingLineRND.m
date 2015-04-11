@@ -21,14 +21,14 @@ function [Pnd,tau] = MeltingLineRND(n)
         linspace(doubleTaus(4),doubleTaus(5),n(4))';
         linspace(doubleTaus(5),doubleTaus(6),n(5))'];
     
-    pi = tau*0;
-    I = 1:n(1);                 pi(I) = PressureMeltIh (doubleTaus(1)./tau(I));
-    I = nTotal(1) + (1:n(2));   pi(I) = PressureMeltIII(doubleTaus(2)./tau(I));
-    I = nTotal(2) + (1:n(3));   pi(I) = PressureMeltV  (doubleTaus(3)./tau(I));
-    I = nTotal(3) + (1:n(4));   pi(I) = PressureMeltVI (doubleTaus(4)./tau(I));
-    I = nTotal(4) + (1:n(5));   pi(I) = PressureMeltVII(doubleTaus(5)./tau(I));
+    P = tau*0;
+    I = 1:n(1);                 P(I) = PressureMeltIh (doubleTaus(1)./tau(I));
+    I = nTotal(1) + (1:n(2));   P(I) = PressureMeltIII(doubleTaus(2)./tau(I));
+    I = nTotal(2) + (1:n(3));   P(I) = PressureMeltV  (doubleTaus(3)./tau(I));
+    I = nTotal(3) + (1:n(4));   P(I) = PressureMeltVI (doubleTaus(4)./tau(I));
+    I = nTotal(4) + (1:n(5));   P(I) = PressureMeltVII(doubleTaus(5)./tau(I));
     
-    Pnd = pi/DimensioningPressure();
+    Pnd = P/DimensioningPressure();
     
 end
 

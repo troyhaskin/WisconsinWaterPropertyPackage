@@ -1,6 +1,8 @@
-function [iLNDt,iGNDt] = TriplePointInternalEnergiesND()
-    % Pre-calculated phase equilibria values using Tsat = TriplePointTemperature()
+function [iLtND,iGtND] = TriplePointInternalEnergiesND()
+
+    % Pre-calculated phase equilibria values using T = TriplePointTemperature()
     % and nondimensionalized by DimensioningInternalEnergy() (R*Tc).
-    iLNDt = 0                       ; %[J/kg]
-    iGNDt = +7.9522773665098399     ; %[J/kg]
+    iLtND = 0                       ; %[J/kg]
+    iGtND = +7.9522773665098576E+00 ; %[J/kg]
+
 end

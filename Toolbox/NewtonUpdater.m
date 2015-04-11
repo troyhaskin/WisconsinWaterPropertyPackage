@@ -15,18 +15,18 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
     alpha           = 0.5                   ; % Back-tracking relaxor
     
     
-    %   Account for function-handle without two outputs
-    if (nargout(Update) < 0)
-        Update = @(x,mask) functionHandleWorkAround(Update,x,mask);
-    end
-    
-    
     % ======================================================================= %
     %     Pre-loop: check for already converged solution (just in case)       %
     % ======================================================================= %
     
-    % Evaluate
-    [dxNow,Rbest] = Update(xk,Iupdate)    ; % First update and norm
+    %   Account for a function handle that may return only one array
+    try
+        [dxNow,Rbest] = Update(xk,Iupdate)    ; % First update and norm
+    catch
+        Update        = @(x,mask) functionHandleWorkAround(Update,x,mask)   ;
+        [dxNow,Rbest] = Update(xk,Iupdate)                                  ;
+    end
+
     
     % Convergence check: Residual ONLY.
     Converged       = abs(Rbest) < Tolerance;
@@ -89,8 +89,7 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         SumErr      = SumErr (NotConverged,:)   ;
     end
     
-    Ipush         = Iupdate(NotConverged)  ;
-    xSol(Ipush,:) = xk(NotConverged,:)     ;
+    xSol(Iupdate,:) = xk(:,:)     ;
     
 end
 
