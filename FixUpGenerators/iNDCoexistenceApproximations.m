@@ -98,7 +98,7 @@ delL1 = delL(mask);
 %   SHIFT
 shift = 5.53E-3;
 iL1   = correlation(c,delL1) + shift;
-plot(delL(mask),iL(mask),delL1,iL1,'--');
+% plot(delL(mask),iL(mask),delL1,iL1,'--');
 %   Print Information
 fprintf('VaporDome: Liquid: Region 1\n');
     fprintf('\tDensity Limits:\n');
@@ -232,9 +232,9 @@ iNDMfit(3) = 0.996*iNDMfit(3);
 [p,S,mu] = polyfit(delM(mask),iNDMfit,3);
 delM1 = delM;
 iNDM1 = polyval(p,delM1,S,mu);
-plot(delM,iNDM,delM1,iNDM1,delM1(mask),iNDM1(mask),'o');
+% plot(delM,iNDM,delM1,iNDM1,delM1(mask),iNDM1(mask),'o');
 % Show((iNDM1(1:1) - iNDM(1:1))');
-all(iNDM(1:end) <= iNDM1(1:end));
+% all(iNDM(1:end) <= iNDM1(1:end));
 fprintf('Melt Curve: Liquid Line\n');
     fprintf('\tDensity Limits:\n');
         fprintf('\t\t%+23.16E\n',[min(delM),max(delM)]);
@@ -274,9 +274,9 @@ iNDfit(4) = 1.00001*iNDfit(4)         ;
 [p,S,mu]  = polyfit(log(delS(mask)),iNDfit,4);
 delS1       = delS;
 iNDS1       = polyval(p,log(delS1),S,mu);
-semilogx(delS,iNDS,delS1,iNDS1,delS(mask),iNDS(mask),'o');
+% semilogx(delS,iNDS,delS1,iNDS1,delS(mask),iNDS(mask),'o');
 % Show((iNDS1(1:end) - iNDS(1:end))');
-all(iNDS(1:end) <= iNDS1(1:end))
+% all(iNDS(1:end) <= iNDS1(1:end));
 fprintf('Melt Curve: Gas Line\n');
     fprintf('\tDensity Limits:\n');
         fprintf('\t\t%+23.16E\n',[min(delS),max(delS)]);

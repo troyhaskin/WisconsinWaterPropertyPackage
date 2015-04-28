@@ -1,12 +1,15 @@
-function iNDt = InternalEnergyTripleLineRND(delta)
-    
+function iNDt = InternalEnergyTripleRND(delta)
+
+    %   Load triple line data
     [delLt,delGt] = TriplePointDensitiesR();
+    [iLt,iGt]     = TriplePointInternalEnergiesND();
     
-    iNDt = delta*0;
+    %   Quality
+    vLt = 1./delLt;
+    x = (1./delta - vLt)./(1./delGt - vLt);
     
-    isMixed = (delta <= delLt) && (delta >= delGt);
-    TriplePointInternalEnergiesND
-    
-    
+    %   Evaluate
+    iNDt = (1 - x).*iLt + x.*iGt;
+
     
 end
