@@ -67,8 +67,9 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
                       delGgiven >= delGmin    ];      % Minimum saturation density bound
     DoNotIterate   = [delLgiven <= delLnearC   ;...   % Near critical point stability bound
                       delGgiven >= delGnearC  ];      % Near critical point stability bound
-    NotNearTriple  = [delLgiven <= delLnearT   ;...   % Near triple   point stability bound
-                      delGgiven >= delGnearT  ];      % Near triple   line  stability bound
+    NotNearTriple  = delGiven == delGiven;
+    %[delLgiven <= delLnearT   ;...   % Near triple   point stability bound
+                      %delGgiven >= delGnearT  ];      % Near triple   line  stability bound
     NearTriple     = not(NotNearTriple)        ;
     CannotSaturate = not(CanSaturate)          ;
 
@@ -85,6 +86,7 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     % Get guess values for all given density values not near the triple line
     if any(WillGuess)
         [delLguess,delGguess,tauGuess] = EstimateDelLDelGTauFromDel(delGiven(WillGuess));
+        tauGuess = 2.3555;
     end
 
     % Get average tau value for near triple point liquid densities
