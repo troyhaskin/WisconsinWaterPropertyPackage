@@ -11,7 +11,9 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     
     % Look for given guess tau
     if (nargin < 3) || isempty(tau0)
-        tau0 = false;
+        useDeltaEstimation = true;
+    else
+        useDeltaEstimation = false;
     end
 
     % Given Masks
@@ -63,37 +65,56 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     %                   has been returned, and using a function designed to use another 
     %                   property to uniquely specify the saturation state is required.
     %
-    
-    [delLmax   , delGmin  ] = SaturationLineDensityBoundsR()        ;
     [delLnearC , delGnearC] = NearCriticalStabilityDensityLimitsR() ;
-    [delLnearT , delGnearT] = NearTripleStabilityDensityLimitsR()   ;
+    [delLt,~]               = TriplePointDensitiesR()               ;
+    [delGmin,delLmax]       = saturableDeltas()                     ;
 
     CanSaturate    = [delLgiven <= delLmax     ;...   % Maximum saturation density bound
                       delGgiven >= delGmin    ];      % Minimum saturation density bound
     DoNotIterate   = [delLgiven <= delLnearC   ;...   % Near critical point stability bound
                       delGgiven >= delGnearC  ];      % Near critical point stability bound
-    NotNearTriple  = [delLgiven <= delLnearT   ;...   % Near triple   point stability bound
-                      delGgiven >= delGnearT  ];      % Near triple   line  stability bound
-    NearTriple     = not(NotNearTriple)        ;
-    CannotSaturate = not(CanSaturate)          ;
+    NearTriple     = [(delLgiven >= delLt) & (delLgiven <= delLmax);false(NgivenG,1)];
+    NotNearTriple  = not(NearTriple)    ;
+    CannotSaturate = not(CanSaturate)   ;
 
     % Logical index for values that will be iterated upon
-    WillGuess    = NotNearTriple & CanSaturate & not(tau0)  ;
-    WillIterate  = WillGuess     & not(DoNotIterate)        ;
+    WillGuess    = (NotNearTriple | not(useDeltaEstimation)) & CanSaturate  ;
+    WillIterate  = WillGuess     & not(DoNotIterate)                        ;
 
 
 
     % ================================================================================== %
     %                                    Guess Values                                    %
     % ================================================================================== %
+    
+    %   Allocation
+    delLguess = delGiven;
+    delGguess = delGiven;
+    tauGuess  = delGiven;
+
 
     % Get guess values for all given density values not near the triple line
-    if any(WillGuess)
-        [delLguess,delGguess,tauGuess] = EstimateDelLDelGTauFromDel(delGiven(WillGuess));
+    if useDeltaEstimation
+        
+        %   No tau0 given
+        if any(WillGuess)
+            [delLguess,delGguess,tauGuess] = EstimateDelLDelGTauFromDel(delGiven(WillGuess));
+
+        end
+
+    else
+
+         if any(CanSaturate)
+            %   tau0 given
+            tauGuess = tau0;
+            delLguess(GivenG & CanSaturate) = EstimateDelLFromTau(tauGuess(GivenG & CanSaturate));
+            delGguess(GivenL & CanSaturate) = EstimateDelGFromTau(tauGuess(GivenL & CanSaturate));
+        end
+
     end
 
     % Get average tau value for near triple point liquid densities
-    if any(NearTriple)
+    if any(NearTriple & useDeltaEstimation)
         [tauHigh,tauLow]   = GetTauLimitsNearTriplePoint(delGiven(NearTriple))      ;
         tauAverage         = (tauHigh + tauLow)/2                                   ;
         [~,delLnearT,delGnearT] = SaturationStateGivenTauRRND(tauAverage)           ;
@@ -133,7 +154,8 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
 
         % Newton solution
         Solution = NewtonUpdater(Updater,Guess,Tolerance,IterMax,true);
-
+    else
+        Solution = delGiven(:,[1,1]);
     end
     
     % Allocations
@@ -152,9 +174,9 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     tau (WillIterate)           = Solution(   :   ,2)   ;
 
     % Insert Near Triple results
-    delG(NearTriple) = delGnearT    ;
-    delL(NearTriple) = delLnearT    ;
-    tau (NearTriple) = tauAverage   ;
+    delG(NearTriple & useDeltaEstimation) = delGnearT    ;
+    delL(NearTriple & useDeltaEstimation) = delLnearT    ;
+    tau (NearTriple & useDeltaEstimation) = tauAverage   ;
 
     % Undefinable quantities
     delG(CannotSaturate) = 0  ;
