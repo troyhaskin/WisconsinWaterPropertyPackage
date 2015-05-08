@@ -1,16 +1,11 @@
-function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask,tau0)
+function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,tau0)
     
     % ========================================================= %
     %                        Set-Up                             %
     % ========================================================= %
     
-    % Filter out non-unique entries
-    if (nargin < 2) || isempty(UniqueMask)
-        [delGiven,~,UniqueMask] = UniqueEnough(delGiven,min(eps(delGiven)));
-    end
-    
     % Look for given guess tau
-    if (nargin < 3) || isempty(tau0)
+    if (nargin < 2) || isempty(tau0)
         useDeltaEstimation = true;
     else
         useDeltaEstimation = false;
@@ -190,12 +185,6 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
 
     % Get Pressures
     Pnd = PressureOneRND(delL,tau);
-
-    % Splay out uniques
-    delG = delG(UniqueMask);
-    delL = delL(UniqueMask);
-    tau  = tau (UniqueMask);
-    Pnd  = Pnd (UniqueMask);
 
 end
 
