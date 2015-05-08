@@ -1,4 +1,4 @@
-function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
+function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del,isDelL,isDelG)
     
     % Allocate
     delL = del * 0;
@@ -6,49 +6,50 @@ function [delL,delG,tau] = EstimateDelLDelGTauFromDel(del)
     tau  = del * 0;
     
     % Phase logicals
-    IsDelC   = (del == 1)   ;   % Critical condition
-    IsDelL   = del >  1     ;   % liquid side in stable Newton iteration regime
-    IsDelG   = del <  1     ;   % gas    side in stable Newton iteration regime
+    isDelC   = (del == 1)   ;   % Critical condition
+    if (nargin < 2)
+        isDelL   = del > 1  ;   % liquid side in stable Newton iteration regime
+        isDelG   = del < 1  ;   % gas    side in stable Newton iteration regime
+    end
     
     % Push known values
-    delL(IsDelL) = del(IsDelL);
-    delG(IsDelG) = del(IsDelG);
+    delL(isDelL) = del(isDelL);
+    delG(isDelG) = del(isDelG);
     
     % Catch critical states and auto-assign (also avoids need for iteration)
-    delL(IsDelC) = 1    ;
-    delG(IsDelC) = 1    ;
-    tau (IsDelC) = 1    ;
+    delL(isDelC) = 1    ;
+    delG(isDelC) = 1    ;
+    tau (isDelC) = 1    ;
     
     % Iteration parameters
-    Tolerance = 1E-10   ;   % Just above the FP precision limit of doubles
-    IterMax   = DefaultMaximumIterationCount()   ;
+    Tolerance = 1E-14                           ;   % Just above the FP precision limit of doubles
+    IterMax   = DefaultMaximumIterationCount()  ;
     
     % Solve with liquid density
-    if any(IsDelL)
-        tauL = EstimateTauFromDelL(del(IsDelL)) ;   % Get initial guess
+    if any(isDelL)
+        tauL = EstimateTauFromDelL(del(isDelL)) ;   % Get initial guess
         
-        Updater = @(t,Mask) GetTauFromDelL(t,Mask,del(IsDelL))  ;   % Update handle
-        tauL = NewtonUpdater(Updater,tauL,Tolerance,IterMax)    ;   % Solve
+        Updater = @(tau,Mask) GetTauFromDelL(tau,Mask,del(isDelL)) ;   % Update handle
+        tauL = NewtonUpdater(Updater,tauL,Tolerance,IterMax);   % Solve
         
-        tau (IsDelL) = tauL                     ; % Assign tau value
-        delG(IsDelL) = EstimateDelGFromTau(tauL); % Assign delG value
+        tau (isDelL) = tauL                     ; % Assign tau value
+        delG(isDelL) = EstimateDelGFromTau(tauL); % Assign delG value
     end
 
 
 
     % Solve with gas density
-    if any(IsDelG)
-        tauG = EstimateTauFromDelG(del(IsDelG));    % Get initial guess
+    if any(isDelG)
+        tauG = EstimateTauFromDelG(del(isDelG));    % Get initial guess
         
-        Updater = @(t,Mask) GetTauFromDelG(t,Mask,del(IsDelG))  ;	% Update handle
+        Updater = @(t,Mask) GetTauFromDelG(t,Mask,del(isDelG))  ;   % Update handle
         tauG = NewtonUpdater(Updater,tauG,Tolerance,IterMax)    ;   % Solve
         
-        tau (IsDelG) = tauG                     ; % Assign tau value
-        delL(IsDelG) = EstimateDelLFromTau(tauG); % Assign delL value
+        tau (isDelG) = tauG                     ; % Assign tau value
+        delL(isDelG) = EstimateDelLFromTau(tauG); % Assign delL value
     end
     
 end
-
 
 
 function [dx,Norm] = GetTauFromDelL(tau,Mask,delL)

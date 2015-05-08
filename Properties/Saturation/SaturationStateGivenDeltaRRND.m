@@ -1,4 +1,4 @@
-function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask)
+function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask,tau0)
     
     % ========================================================= %
     %                        Set-Up                             %
@@ -7,6 +7,11 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     % Filter out non-unique entries
     if (nargin < 2) || isempty(UniqueMask)
         [delGiven,~,UniqueMask] = UniqueEnough(delGiven,min(eps(delGiven)));
+    end
+    
+    % Look for given guess tau
+    if (nargin < 3) || isempty(tau0)
+        tau0 = false;
     end
 
     % Given Masks
@@ -67,15 +72,14 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
                       delGgiven >= delGmin    ];      % Minimum saturation density bound
     DoNotIterate   = [delLgiven <= delLnearC   ;...   % Near critical point stability bound
                       delGgiven >= delGnearC  ];      % Near critical point stability bound
-    NotNearTriple  = delGiven == delGiven;
-    %[delLgiven <= delLnearT   ;...   % Near triple   point stability bound
-                      %delGgiven >= delGnearT  ];      % Near triple   line  stability bound
+    NotNearTriple  = [delLgiven <= delLnearT   ;...   % Near triple   point stability bound
+                      delGgiven >= delGnearT  ];      % Near triple   line  stability bound
     NearTriple     = not(NotNearTriple)        ;
     CannotSaturate = not(CanSaturate)          ;
 
     % Logical index for values that will be iterated upon
-    WillGuess    = NotNearTriple & CanSaturate          ;
-    WillIterate  = WillGuess     & not(DoNotIterate)    ;
+    WillGuess    = NotNearTriple & CanSaturate & not(tau0)  ;
+    WillIterate  = WillGuess     & not(DoNotIterate)        ;
 
 
 
@@ -86,7 +90,6 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,UniqueMask
     % Get guess values for all given density values not near the triple line
     if any(WillGuess)
         [delLguess,delGguess,tauGuess] = EstimateDelLDelGTauFromDel(delGiven(WillGuess));
-        tauGuess = 2.3555;
     end
 
     % Get average tau value for near triple point liquid densities
