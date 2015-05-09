@@ -88,49 +88,51 @@ fprintf('\n------------------------------------------------\n');
 % --------------------------- %
 %           Region 1          %
 % --------------------------- %
-%   Determine fit coefficients
-mask  = 1095:numel(delL);
-correlation = @(c,x) c(1)*(x - delL(mask(end))).^c(2).*exp(c(3)*( c(4)*x - delL(mask(end)))) + iL(mask(end));
-objective   = @(c) norm(correlation(c,delL(mask)) - 1.0000*iL(mask),1);
-c = [+4.64,+0.639,-0.04878,+1.513];
-c = fminsearch(objective,c);
+%   Set-up
+deLmin = 1.0;
+iLmax = CriticalInternalEnergyND();
+mask  = 600 : numel(delL);
+%   Determine optimal coefficients
+[p,S,mu] = polyfit(delL(mask),iL(mask),5);
 %   Contract
 mask = mask(1):mask(end);
 delL1 = delL(mask);
 %   SHIFT
-shift = 5.53E-3;
-iL1   = correlation(c,delL1) + shift;
-% plot(delL(mask),iL(mask),delL1,iL1,'--');
+shift = +6.1045559161394536E-03;
+iL1   = polyval(p,delL1,S,mu) + shift;
+plot(delL(mask),iL(mask),delL1,iL1,'--');
 %   Print Information
-fprintf('VaporDome: Liquid: Region 1\n');
-    fprintf('\tDensity Limits:\n');
-        fprintf('\t\t%+23.16E\n',delL(mask([1,end])));
-    fprintf('\tCorrelation:\n\t\t%s\n',[func2str(correlation),' + shift']);
-    fprintf('\tdelL(mask(end)):\n\t\t%+23.16E\n',delL(mask(end)));
-    fprintf('\tiL(mask(end)):\n\t\t%+23.16E\n'  ,iL(mask(end)));
-    fprintf('\tshift:\n\t\t%+23.16E\n'  ,shift);
-    fprintf('\tc:\n');
-        fprintf('\t\t%+23.16E\n',c);
+all(iL1 >= iL(mask))
+% fprintf('VaporDome: Liquid: Region 1\n');
+%     fprintf('\tDensity Limits:\n');
+%         fprintf('\t\t%+23.16E\n',delL(mask([1,end])));
+%     fprintf('\tCorrelation:\n\t\t%s\n',[func2str(correlation),' + shift']);
+%     fprintf('\tdelL(mask(end)):\n\t\t%+23.16E\n',delL(mask(end)));
+%     fprintf('\tiL(mask(end)):\n\t\t%+23.16E\n'  ,iL(mask(end)));
+%     fprintf('\tshift:\n\t\t%+23.16E\n'  ,shift);
+%     fprintf('\tc:\n');
+%         fprintf('\t\t%+23.16E\n',c);
+% 
+% 
+% fprintf('\n------------------------------------------------\n');
 
-
-fprintf('\n------------------------------------------------\n');
-
-
+%%
 % --------------------------- %
 %           Region 2          %
 % --------------------------- %
 %   Determine fit coefficients
-mask  = 204:1095;
-correlation = @(c,x) c(1)*(delL(mask(1)) - x).^c(2).*exp(c(3)*(delL(mask(1)) - c(4)*x)) + iL(mask(1));
-objective   = @(c) norm(correlation(c,delL(mask)) - iL(mask),2);
-c = [+4.6349302859479611E+00,+6.3859197437871751E-01,-4.8779370095661273E-02,+1.5127244173436336E+00];
-c = fminsearch(objective,c);
+[~,delLmax] = saturableDeltas();
+[~,iLAtMax]   = iNDsAtSaturableDeltas();
+mask  = 300:600;
+[p,S,mu] = polyfit(delL(mask),iL(mask),5);
 %   Contract
 mask = mask(1):mask(end);
 delL2 = delL(mask);
 %   SHIFT
-shift = 1.386E-2;
-iL2   = correlation(c,delL2) + shift;
+shift = +7.4979900206617600E-04;
+iL2   = polyval(p,delL2,S,mu) + shift;
+plot(delL(mask),iL(mask),delL2,iL2)
+all(iL2 >= iL(mask))
 %   Print Information
 fprintf('VaporDome: Liquid: Region 2\n');
     fprintf('\tDensity Limits:\n');
@@ -141,73 +143,68 @@ fprintf('VaporDome: Liquid: Region 2\n');
     fprintf('\tshift:\n\t\t%+23.16E\n'  ,shift);
     fprintf('\tc:\n');
         fprintf('\t\t%+23.16E\n',c);
-
-        
-        
 fprintf('\n------------------------------------------------\n');
 
         
-
+%%
+clc();
 % --------------------------- %
 %           Region 3          %
 % --------------------------- %
 %   Determine fit coefficients
-mask  = [117,200,204];
+mask  = [117,200,300];
 mask = mask(1):mask(end);
-correlation = @(c,x) c(2)*(max(delL(mask)) - x).^c(1).*exp(c(3)*(max(delL) - x))+iL(mask(1));
-objective   = @(c) norm(correlation(c,delL(mask)) - iL(mask),2);
-c = [0.49,2.67,15];
+correlation = @(c,x) c(2)*(delLmax - x).^c(1).*exp(c(3)*(delLmax - x)) + iLAtMax;
+objective   = @(c) norm(correlation(c,delL(mask)) - iL(mask),Inf);
+c = [+5.1770062815506157E-01;+3.2967387240093049E+00;+2.1813809229584362E+00];
 c = fminsearch(objective,c);
-%   Corrections to ensure over-prediction
-c(1) = 0.980*c(1);
-c(2) = 0.927*c(2);
+Show(c);
 %   Contract
 delL3 = delL(mask);
-iL3  = correlation(c,delL3);
-%   Print
-fprintf('VaporDome: Liquid: Region 3\n');
-    fprintf('\tDensity Limits:\n');
-        fprintf('\t\t%+23.16E\n',delL(mask([1,end])));
-    fprintf('\tCorrelation:\n\t\t%s\n',func2str(correlation));
-    fprintf('\t(max(delL(mask)):\n\t\t%+23.16E\n',max(delL(mask)));
-    fprintf('\tiL(mask(1)):\n\t\t%+23.16E\n'  ,iL(mask(1)));
-    fprintf('\tc:\n');
-        fprintf('\t\t%+23.16E\n',c);
+shift = +5.9565801837926924E-04;
+iL3  = correlation(c,delL3) + shift;
+plot(delL(mask),iL(mask),delL3,iL3);
+all(iL3 >= iL(mask));
+% %   Print
+% fprintf('VaporDome: Liquid: Region 3\n');
+%     fprintf('\tDensity Limits:\n');
+%         fprintf('\t\t%+23.16E\n',delL(mask([1,end])));
+%     fprintf('\tCorrelation:\n\t\t%s\n',func2str(correlation));
+%     fprintf('\t(max(delL(mask)):\n\t\t%+23.16E\n',max(delL(mask)));
+%     fprintf('\tiL(mask(1)):\n\t\t%+23.16E\n'  ,iL(mask(1)));
+%     fprintf('\tc:\n');
+%         fprintf('\t\t%+23.16E\n',c);
+% fprintf('\n------------------------------------------------\n');      
 
 
-
-fprintf('\n------------------------------------------------\n');      
-
-
+%%
 % --------------------------- %
 %           Region 4          %
 % --------------------------- %
 %   Determine fit coefficients
 mask  = [1,117];
 mask = mask(1):mask(end);
-correlation = @(c,x) c(2)*(max(delL(mask)) - x).^c(1).*exp(c(3)*(max(delL) - x))+iL(mask(end));
+correlation = @(c,x) c(2)*(delLmax - x).^c(1).*exp(c(3)*(delLmax - x))+iLAtMax;
 objective   = @(c) norm(correlation(c,delL(mask)) - iL(mask),2);
-c = [0.49,2.67,15];
+c = [+4.9763662117192797E-01;-2.7486285142106492E+00;-2.2862334141468203E+01];
 c = fminsearch(objective,c);
 %   Corrections to ensure over-prediction
-c(1) = 0.9998*c(1);
-c(2) = 1.000*c(2);
+shift = -1.1372162114144102E-05;
 %   Contract
 delL4 = delL(mask);
-iL4  = correlation(c,delL4);
-%   Print
-fprintf('VaporDome: Liquid: Region 4\n');
-    fprintf('\tDensity Limits:\n');
-        fprintf('\t\t%+23.16E\n',delL(mask([1,end])));
-    fprintf('\tCorrelation:\n\t\t%s\n',func2str(correlation));
-    fprintf('\t(max(delL(mask)):\n\t\t%+23.16E\n',max(delL(mask)));
-    fprintf('\tiL(mask(end)):\n\t\t%+23.16E\n'  ,iL(mask(end)));
-    fprintf('\tc:\n');
-        fprintf('\t\t%+23.16E\n',c);
-
-
-
-fprintf('\n------------------------------------------------\n');
+iL4  = correlation(c,delL4) + shift;
+plot(delL(mask),iL(mask),delL4,iL4,'--');
+all(iL4 <= iL(mask))
+% %   Print
+% fprintf('VaporDome: Liquid: Region 4\n');
+%     fprintf('\tDensity Limits:\n');
+%         fprintf('\t\t%+23.16E\n',delL(mask([1,end])));
+%     fprintf('\tCorrelation:\n\t\t%s\n',func2str(correlation));
+%     fprintf('\t(max(delL(mask)):\n\t\t%+23.16E\n',max(delL(mask)));
+%     fprintf('\tiL(mask(end)):\n\t\t%+23.16E\n'  ,iL(mask(end)));
+%     fprintf('\tc:\n');
+%         fprintf('\t\t%+23.16E\n',c);
+% fprintf('\n------------------------------------------------\n');
 
 
 
