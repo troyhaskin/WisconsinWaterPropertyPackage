@@ -70,7 +70,7 @@ function xSol = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         xkp1  = xk - dxNow  ;
         
         % Post-update loop-breaking checks
-        Converged       = ConvergenceTest(dxNow,Rbest,Tolerance) ;
+        Converged       = ConvergenceTest(dxNow + (Iter < 10),Rbest,Tolerance) ;
         NotConverged    = not(Converged)                      ;
         BelowIterMax    = Iter < MaxIter                      ;
         Iter            = Iter + 1                            ;
