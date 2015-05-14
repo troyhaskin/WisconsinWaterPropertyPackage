@@ -1,4 +1,4 @@
-function [mayHaveSublimated,isBelowTriple,mayHaveFrozen] = mayHaveIceDeltaIND(delta,iND)
+function varargout = mayHaveIceDeltaIND(delta,iND)
 
     %   Triple line values
     [delLt,delGt] = TriplePointDensitiesR();
@@ -9,10 +9,10 @@ function [mayHaveSublimated,isBelowTriple,mayHaveFrozen] = mayHaveIceDeltaIND(de
     canFreeze     = (delta >= +3.1049457143874224E+00) & (delta <= +3.3888854485186819E+00);
 
     %   Allocate masks
-    deltaSize         = size(delta)     ;
-    mayHaveSublimated = false(deltaSize);
-    isBelowTriple     = false(deltaSize);
-    mayHaveFrozen     = false(deltaSize);
+    deltaSize         = size(delta)         ;
+    mayHaveSublimated = false(deltaSize)    ;
+    isBelowTriple     = mayHaveSublimated   ;
+    mayHaveFrozen     = mayHaveSublimated   ;
     
     %   Evaluate
     iNDcompare                      = InternalEnergySublimationFitRND(delta(canSublimate))  ;
@@ -22,5 +22,26 @@ function [mayHaveSublimated,isBelowTriple,mayHaveFrozen] = mayHaveIceDeltaIND(de
     iNDcompare                      = InternalEnergyFreezingFitRND(delta(canFreeze))        ;
     mayHaveFrozen(canFreeze)        = iNDcompare >= iND(canFreeze)                          ;
 
+    %   Main predicate
+    mayHaveIce = mayHaveSublimated | isBelowTriple | mayHaveFrozen;
+    
+    %   Variable output
+    switch(nargout)
+        case(1)
+            varargout{1} = mayHaveIce;
+
+        case(2)
+            varargout = {mayHaveIce , isBelowTriple} ;
+
+        case(3)
+            varargout = {mayHaveSublimated , isBelowTriple , mayHaveFrozen} ;
+
+        case(4)
+            varargout = {mayHaveIce , mayHaveSublimated , isBelowTriple , mayHaveFrozen} ;
+
+        otherwise
+            error('WWPP:mayHaveIceDeltaIND:WrongOutputCount',...
+                'Only 1, 2, 3, or 4 outputs are allowed.');
+    end
 
 end
