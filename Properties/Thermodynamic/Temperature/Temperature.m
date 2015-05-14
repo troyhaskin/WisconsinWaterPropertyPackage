@@ -58,7 +58,7 @@ function [T,varargout] = Temperature(rhoMix,iMix,Tguess,PhaseCheck)
         if ((nargin < 3) || isempty(Tguess)) && PhaseCheck
             TOne = SmartMask(1.1*Tsat,OnePhase);
             
-        elseif ((nargin < 3) || isempty(Tguess)) || not(PhaseCheck)
+        elseif (nargin < 3) || any(isempty(Tguess))
             TOne = 300*Sizer;
             
         else

@@ -1,22 +1,22 @@
-function HelmDeriv = HelmholtzResidual_tt(delta,tau)
+function Helm_tt = HelmholtzResidual_tt(delta,tau)
     
     [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
     
     betaInv   = 1./beta                     ;
     deltaMod  = (delta - 1).^2 + eps(delta)	;
-    HelmDeriv = 0*delta               ;
-    SumErr    = 0*delta               ; % Summation correction (Kahan summation)
+    Helm_tt   = 0*delta               ;
+    SumErr_tt = 0*delta               ; % Summation correction (Kahan summation)
 
     
     for k = 1:7
         Part      = n(k)*t(k)*(t(k)-1) .* delta.^(d(k)) .* tau.^(t(k)-2)   ;
-        [HelmDeriv,SumErr] = KahanSum(HelmDeriv,Part,SumErr);
+        [Helm_tt,SumErr_tt] = KahanSum(Helm_tt,Part,SumErr_tt);
     end
     
     for k = 8:51
         Part      = exp(-delta.^(c(k)))                                         ;
         Part      = n(k)*t(k)*(t(k)-1) * delta.^(d(k)) .* tau.^(t(k)-2) .* Part ;
-        [HelmDeriv,SumErr] = KahanSum(HelmDeriv,Part,SumErr);
+        [Helm_tt,SumErr_tt] = KahanSum(Helm_tt,Part,SumErr_tt);
     end
     
     for k = 52:54
@@ -25,7 +25,7 @@ function HelmDeriv = HelmholtzResidual_tt(delta,tau)
         Part    = t(k)./tau - 2.*beta(m).*(tau-gamma(m))                        ;
         Part    = Part.^2 - t(k)./tau.^2 - 2*beta(m)                            ;
         Part    = n(k) * delta.^(d(k)) .* tau.^(t(k)) .* exp(Arg) .* Part       ;
-        [HelmDeriv,SumErr] = KahanSum(HelmDeriv,Part,SumErr);
+        [Helm_tt,SumErr_tt] = KahanSum(Helm_tt,Part,SumErr_tt);
     end
     
     if (delta ~= 1)
@@ -43,7 +43,7 @@ function HelmDeriv = HelmholtzResidual_tt(delta,tau)
             
             Part        = Deltabi_tt .* Psi + 2* Deltabi_t .* Psi_t        ;
             Part        =  n(k) * delta .*(Part + Delta.^(b(p)) .* Psi_tt) ;
-            [HelmDeriv,SumErr] = KahanSum(HelmDeriv,Part,SumErr);
+            [Helm_tt,SumErr_tt] = KahanSum(Helm_tt,Part,SumErr_tt);
         end
     end
     
