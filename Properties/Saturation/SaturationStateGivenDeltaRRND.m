@@ -1,4 +1,4 @@
-function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,tau0)
+function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     
     % ========================================================= %
     %                        Set-Up                             %
@@ -12,24 +12,25 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,tau0)
     end
 
     % Given Masks
-    GivenL = delGiven >= 1;
-    GivenG = delGiven <= 1;
+    GivenL = delta >  1 ;
+    GivenG = delta <  1 ;
+    GivenC = delta == 1 ;
 
     % Ordering Masks: since the solution algorithm relies on the ordering of dels to be
     % [delL;delG], these index arrays allow insertion of the solved properties into the 
     % original ordering.
-    Ngiven    = length(delGiven);
+    Ngiven    = length(delta);
     Ioriginal = 1 : Ngiven;
-    Iordered  = [Ioriginal(GivenL),Ioriginal(GivenG)];
+    Iordered  = [Ioriginal(GivenL),Ioriginal(GivenG),Ioriginal(GivenC)];
 
     % Given densities
-    delLgiven = delGiven(GivenL)        ;
-    delGgiven = delGiven(GivenG)        ;
+    delLgiven = delta(GivenL)           ;
+    delGgiven = delta(GivenG)           ;
     delGiven  = [delLgiven;delGgiven]   ; % destroys original ordering; use index arrays above
 
     % Number of gas densities given
-    NgivenL = length(delLgiven) ;
-    NgivenG = Ngiven - NgivenL  ;
+    NgivenL = nnz(GivenL);
+    NgivenG = nnz(GivenG);
     lGivenL = [ true(NgivenL,1);false(NgivenG,1)];
     lGivenG = [false(NgivenL,1); true(NgivenG,1)];
 
@@ -154,9 +155,9 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,tau0)
     end
     
     % Allocations
-    delG = delGiven;
-    delL = delGiven;
-    tau  = delGiven;
+    delG = delta;
+    delL = delta;
+    tau  = delta;
     
     % Insert non-iterated guess values
     delG(not(WillIterate) & lGivenL) = delGguess(not(WillIterate))   ;
@@ -173,6 +174,11 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delGiven,tau0)
     delL(NearTriple & useDeltaEstimation) = delLnearT    ;
     tau (NearTriple & useDeltaEstimation) = tauAverage   ;
 
+    %   Critical quantities
+    delG(GivenC) = 1;
+    delL(GivenC) = 1;
+    tau (GivenC) = 1;
+    
     % Undefinable quantities
     delG(CannotSaturate) = 0  ;
     delL(CannotSaturate) = 0  ;
