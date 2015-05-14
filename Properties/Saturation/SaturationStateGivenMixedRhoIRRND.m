@@ -1,4 +1,4 @@
-function varargout = SaturationStateGivenMixedRhoIRRND(delMix,iNDmix,varargin)
+function [Pnd,tauSol,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,varargin)
     
     %   Input patterns:
     %       o SaturationStateGivenMixedRhoIRRND(delMix,PhaseCheck,iMixND)
@@ -13,14 +13,14 @@ function varargout = SaturationStateGivenMixedRhoIRRND(delMix,iNDmix,varargin)
     %
     
     
-    Sizer = zeros(size(delMix));
+    Sizer = zeros(size(delta));
     
     
     % Calculate the mixture internal energy on the triple line
     [delLt,delGt] = TriplePointDensitiesR()                 ;
     [iLNDt,iGNDt] = TriplePointInternalEnergiesND()         ;
-    taut          = TriplePointTemperatureR() + Sizer       ;
-    xt            = QualityFromDensity(delMix,delLt,delGt)  ;
+    taut          = TriplePointTau()                        ;
+    xt            = QualityFromDensity(delta,delLt,delGt)   ;
     iNDt          = iLNDt + xt.*(iGNDt - iLNDt)             ;
     
     
@@ -28,26 +28,48 @@ function varargout = SaturationStateGivenMixedRhoIRRND(delMix,iNDmix,varargin)
     OptionalArguments = {true,[],[],[]}             ;   % Allocate with defaults
     nOptionalIn       = length(varargin)            ;   % Number of optionals passed
     OptionalArguments(1:nOptionalIn) = varargin     ;   % Overwrite defaults
-    [PhaseCheck,tauSat,iSatND,tauGuess] = OptionalArguments{:};
+    [PhaseCheck,tauSat,iSatND,tauGuess] = OptionalArguments{:}; %#ok<ASGLU>
+
+
     
-    % Default phase check
-    if isempty(PhaseCheck)
-        PhaseCheck = true;
-    end
+    %   Allocation
+    tauHi = delta * 0   ;
+    tauLo = tauHi       ;
     
-    % If no tauSat is given for the delMix, calculate it.
-    if isempty(tauSat)
-        [~,tauSat,~,~] = SaturationStateGivenDeltaRRND(delMix);
-    end
+    % ============================================ %
+    %               Exact Phase Check              %
+    % ============================================ %
+    
+    %   non-DMVS region
+    lessThanTriple = delta < delLt;
+    [~,tauHi(lessThanTriple),~,~] = SaturationStateGivenDeltaRRND(delta(lessThanTriple));
+    tauLo(lessThanTriple)         = taut                                                ;
+    
+    %   DMVS region
+    inDMVS                   = not(lessThanTriple);
+    deltaDMVS                = delta(inDMVS);
+    tauBotTop                = estimateTauDMVSRegion(deltaDMVS);
+    [~,tauNearTriple,~,~]    = SaturationStateGivenDeltaRRND([deltaDMVS;deltaDMVS],tauBotTop);
+    tauLo(inDMVS) = tauNearTriple(   1   :end/2);
+    tauHi(inDMVS) = tauNearTriple(end/2+1: end );
+
+    %   Check upper bound
+    iHi          = InternalEnergyOneRND(delta,tauLo) ;
+    notSaturated = iND > iHi                         ;
+    
+    %   Check lower bound
+    iLo = InternalEnergyOneRND(deltaDMVS,tauLo(inDMVS)) ;
+    notSaturated(inDMVS) = notSaturated(inDMVS) | (iND(inDMVS) < iLo(inDMVS));
+    
     
     % If no iSatND is given for the delMix, calculate it.
     if isempty(iSatND)
-        iSatND = InternalEnergyOneRND(delMix,tauSat);
+        iSatND = InternalEnergyOneRND(delta,tauSat);
     end
     
     % If no tauGuess is given, calculate it from a secant line.
     if isempty(tauGuess)
-        tauGuess = taut + (iNDmix - iNDt)./(iSatND - iNDt) .* (tauSat - taut);
+        tauGuess = taut + (iND - iNDt)./(iSatND - iNDt) .* (tauSat - taut);
     end
     
     
@@ -57,8 +79,8 @@ function varargout = SaturationStateGivenMixedRhoIRRND(delMix,iNDmix,varargin)
     NotDone       = true  ;
     Iter          = 0     ;
     tauSol        = Sizer ;
-    iNDwork       = iNDmix;
-    delWork       = delMix;
+    iNDwork       = iND;
+    delWork       = delta;
     InotConverged = 1:length(Sizer);
     
     % Define the first three iterates and the nex
@@ -67,9 +89,9 @@ function varargout = SaturationStateGivenMixedRhoIRRND(delMix,iNDmix,varargin)
     tauk   = tauGuess   ;
     
     % Define the first three residuals
-    Rkm2 = iSatND - iNDmix ;
-    Rkm1 = iNDt   - iNDmix ;
-    Rk   = LocalMixtureInternalEnergy(delMix,tauGuess) - iNDmix;
+    Rkm2 = iSatND - iND ;
+    Rkm1 = iNDt   - iND ;
+    Rk   = LocalMixtureInternalEnergy(delta,tauGuess) - iND;
 
 % ======================================================================= %
 %                            Solution Block                               %
@@ -127,16 +149,15 @@ function varargout = SaturationStateGivenMixedRhoIRRND(delMix,iNDmix,varargin)
         NotDone = any(NotConverged) && (Iter < IterMax);
     end
     
-    [Psat,delL,delG] = SaturationStateGivenTausat(tauSol);
-    x = QualityFromDensity(delMix,delL,delG);
-    
-    varargout = {Psat,tauSol,delL,delG,x};
+    [Pnd,delL,delG] = SaturationStateGivenTauRRND(tauSol);
+    x = QualityFromDensity(delta,delL,delG);
+
 end
 
 function iNDmix = LocalMixtureInternalEnergy(del,tau)
     
     % Get the saturation state
-    [~,delL,delG] = SaturationStateGivenTausat(tau);
+    [~,delL,delG] = SaturationStateGivenTauRRND(tau);
     
     % Calculate the mixture internal energy
     x    = QualityFromDensity(del,delL,delG);

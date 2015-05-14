@@ -32,16 +32,26 @@ c(1) = 0.995*c(1);
 c(2) = 0.981*c(2);
 %   Contract
 tauTopF  = correlation(c,delLTop);
-Show(c);
 %   Print
 figure(1);
 subplot(2,1,1);
     plot(delLTop,tauTop,delLTop,tauTopF,'--');
 subplot(2,1,2);
     semilogy(delLTop,abs(tauTopF - tauTop));
-all(tauTopF >= tauTop)
+fprintf('Upper Portion\n');
+    fprintf('\tDensity Limits:\n');
+        fprintf('\t\t%+23.16E\n',delLTop(mask([1,end])));
+    fprintf('\tCorrelation:\n\t\t%s\n',func2str(correlation));
+    fprintf('\tc:\n');
+        fprintf('\t\t%+23.16E\n',c);
+    fprintf('\tAll bounded: ')
+        if all(tauTopF >= tauTop)
+            fprintf('True\n');
+        else
+            fprintf('False\n');
+        end
 
-
+fprintf('---------------------------------------------------------------\n\n');
 
 %%
 % --------------------------- %
@@ -65,5 +75,17 @@ subplot(2,1,1);
     plot(delLBot,tauBot,delLBot,tauBotF,'--');
 subplot(2,1,2);
     semilogy(delLBot,abs(tauBotF - tauBot));
-all(tauBot >= tauBotF)
+fprintf('Upper Portion\n');
+    fprintf('\tDensity Limits:\n');
+        fprintf('\t\t%+23.16E\n',delLTop(mask([1,end])));
+    fprintf('\tCorrelation:\n\t\t%s\n',func2str(correlation));
+    fprintf('\tc:\n');
+        fprintf('\t\t%+23.16E\n',c);
+    fprintf('\tAll bounded: ')
+        if all(tauBot >= tauBotF)
+            fprintf('True\n');
+        else
+            fprintf('False\n');
+        end
 
+fprintf('---------------------------------------------------------------\n\n');

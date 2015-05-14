@@ -1,4 +1,4 @@
-function [tauBot,tauTop] = estimateTauDMVSRegion(delta)
+function tauBotTop = estimateTauDMVSRegion(delta)
     
     %   Values at maximum saturation density
     [~,delMax]   = saturableDeltas();
@@ -11,5 +11,8 @@ function [tauBot,tauTop] = estimateTauDMVSRegion(delta)
     %   Bottom correlation
     c      = [+5.0023513364394190E-01;-1.7048255682253683E+00;+6.1326675555440637E+00];
     tauBot = c(2)*(delMax - delta).^c(1).*exp(c(3)*(delMax - delta))+tauMax;
+    
+    % Concatenate
+    tauBotTop = [tauBot;tauTop];
 
 end

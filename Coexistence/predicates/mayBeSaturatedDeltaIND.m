@@ -1,12 +1,16 @@
 function mayBeSaturated = mayBeSaturatedDeltaIND(delta,iND)
     
+    %   Set-up constants
     [delGmin,delLmax] = saturableDeltas()   ;
     delGMd    = +4.8776578879917196E-02     ;
     delL1     = +2.8459913232353582E+00     ;
     delL2     = +3.0782066729942112E+00     ;
     [delLt,~] = TriplePointDensitiesR()     ;
 
-    
+    %   Allocate
+    mayBeSaturated = (delGmin <= delta) & (delta <= delLmax);
+
+
     %   First gas region
     delLo = delGmin ;
     delHi = delGMd  ;
