@@ -94,8 +94,10 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
         
         %   No tau0 given
         if any(WillGuess)
-            [delLguess,delGguess,tauGuess] = EstimateDelLDelGTauFromDel(delGiven(WillGuess));
-
+            [delLguess,delGguess,tauGuess] = ...
+                AssignWithFilter(...
+                    @(wg) EstimateDelLDelGTauFromDel(delGiven(wg)),...
+                    WillGuess,delLguess,delGguess,tauGuess);
         end
 
     else
@@ -108,26 +110,6 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
         end
 
     end
-
-    % Get average tau value for near triple point liquid densities
-    if any(NearTriple & useDeltaEstimation)
-        [tauHigh,tauLow]   = GetTauLimitsNearTriplePoint(delGiven(NearTriple))      ;
-        tauAverage         = (tauHigh + tauLow)/2                                   ;
-        [~,delLnearT,delGnearT] = SaturationStateGivenTauRRND(tauAverage)           ;
-        
-%         warning('WWPP:SaturationStateGivenDeltaRRND:MultiValuedRegime'                  ,...
-%                 ['Some of the supplied densities fall into a regime where '    ,...
-%                  'the saturation state is not uniquely defined.  Returned values are '  ,...
-%                  'the average of the two temperatures at which the density '            ,...
-%                  'occurs.  If this is not acceptable, please use a function that '      ,...
-%                  'uses another indepedent property to fully define the saturation '     ,...
-%                  'state.']);
-    else
-        delLnearT  = [];
-        delGnearT  = [];
-        tauAverage = [];
-    end
-
 
 
     % ================================================================================== %
@@ -142,37 +124,34 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
 
         % Fill guess matrix
         Guess = [[delGguess(1:NgivenL);delLguess(NgivenL+1:end)],...
-                   tauGuess,delGiven];
+                   tauGuess];
         Guess = Guess(WillIterate,:);
 
         % Update handle
-        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,NgivenL);
+        nLiquidIterate = nnz(delGiven(WillIterate) > 1);
+        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,delGiven(WillIterate),nLiquidIterate);
 
         % Newton solution
         Solution = NewtonUpdater(Updater,Guess,Tolerance,IterMax,true);
     else
-        Solution = delGiven(:,[1,1]);
+        Solution       = delGiven(:,[1,1])  ;
+        nLiquidIterate = 0                  ;
     end
     
     % Allocations
-    delG = delta;
-    delL = delta;
-    tau  = delta;
+    delG = delGguess ;
+    delL = delLguess ;
+    tau  = tauGuess  ;
     
-    % Insert non-iterated guess values
-    delG(not(WillIterate) & lGivenL) = delGguess(not(WillIterate))   ;
-    delL(not(WillIterate) & lGivenG) = delLguess(not(WillIterate))   ;
-    tau (not(WillIterate))           = tauGuess (not(WillIterate))   ;
+%     % Insert non-iterated guess values
+%     delG(not(WillIterate) & lGivenL) = delGguess(not(WillIterate) & lGivenL);
+%     delL(not(WillIterate) & lGivenG) = delLguess(not(WillIterate) & lGivenG);
+%     tau (not(WillIterate))           = tauGuess (not(WillIterate))          ;
     
     % Insert Newton solutions
-    delL(WillIterate & lGivenG) = Solution(lGivenG(WillIterate),1)   ;
-    delG(WillIterate & lGivenL) = Solution(lGivenL(WillIterate),1)   ;
-    tau (WillIterate)           = Solution(   :   ,2)   ;
-
-    % Insert Near Triple results
-    delG(NearTriple & useDeltaEstimation) = delGnearT    ;
-    delL(NearTriple & useDeltaEstimation) = delLnearT    ;
-    tau (NearTriple & useDeltaEstimation) = tauAverage   ;
+    delL(lGivenG & WillIterate) = Solution(lGivenG(WillIterate),1)   ;
+    delG(lGivenL & WillIterate) = Solution(lGivenL(WillIterate),1)   ;
+    tau (WillIterate)          = Solution(   :   ,2)   ;
 
     %   Critical quantities
     delG(GivenC) = 1;
@@ -198,7 +177,7 @@ end
 
 
 
-function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,NliquidGiven)
+function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
 %
 %   This function provides the Newton updates for an unknown reduced density
 %   delUnknown and associated saturation temperature tauSat given the opposing reduced 
@@ -218,23 +197,23 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,NliquidGiven)
     % Pull unknowns
     dels     = Unknowns(:,1)    ;
     taus     = Unknowns(:,2)    ;
-    delGiven = Unknowns(:,3)    ;
+%     delGiven = Unknowns(:,3)    ;
     
     Nmask   = length(Mask)              ;
     NgivenL = nnz(Mask <= NliquidGiven) ; % number of liquid knowns remaining
     NgivenG = Nmask - NgivenL           ; % number of gas    knowns remaining
-    iMaskL  = 1 : NgivenL               ;
-    iMaskG  = (NgivenL + 1) : Nmask     ;
+    iMaskL  =       1     : NgivenL     ;
+    iMaskG  = (NgivenL+1) :  Nmask      ;
 
     % Assign values for liquid-given equations
-    delLL = delGiven(iMaskL)    ;
-    delGL = dels    (iMaskL)    ;
-    tauLL = taus    (iMaskL)    ;
+    delLL = delGiven(Mask(iMaskL))  ;
+    delGL = dels    (iMaskL)        ;
+    tauLL = taus    (iMaskL)        ;
 
     % Assign values for gas-given equations
-    delLG = dels    (iMaskG)    ;
-    delGG = delGiven(iMaskG)    ;
-    tauGG = taus    (iMaskG)    ;
+    delLG = dels    (iMaskG)        ;
+    delGG = delGiven(Mask(iMaskG))  ;
+    tauGG = taus    (iMaskG)        ;
     
     % Since empty masks create row-empties, this ensures they are
     % column-empties.
@@ -325,8 +304,9 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,NliquidGiven)
     dtau  =  (R2 .* R1_d - R1 .* R2_d) ./ DetR ;
 
     % Final outputs
-    dUnknowns = [ddel,dtau,0*ddel]  ;
-    RNorm     = abs(R1) + abs(R2)   ; % L_1 norm
+%     dUnknowns = [ddel,dtau,0*real(ddel)];
+    dUnknowns = [ddel,dtau]             ;
+    RNorm     = abs(real(R1)) + abs(real(R2)) + imag(R1) + imag(R2); % L_1 norm
     
 end
 

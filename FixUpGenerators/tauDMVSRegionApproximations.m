@@ -23,7 +23,7 @@ tauTop = linspace(tauMd,tauHi,4000)';
 % --------------------------- %
 %   Determine fit coefficients
 mask        = [1;2;3;10;50;4000];
-correlation = @(c,x) c(2)*(delLMax - x).^c(1).*exp(c(3)*(delLMax - x))+tauTop(mask(1));
+correlation = @(c,x) c(2)*(delLMax - x).^c(1).*exp(c(3)*(delLMax - x))+tauMd;
 objective   = @(c) norm(correlation(c,delLTop(mask)) - tauTop(mask),2);
 c = [+4.9928358462384270E-01,+1.6773844460498277E+00,-9.2112364895178622E+00];
 c = fminsearch(objective,c);
@@ -59,7 +59,7 @@ fprintf('---------------------------------------------------------------\n\n');
 % --------------------------- %
 %   Determine fit coefficients
 mask        = [1;2;3990;3998;3999;4000];
-correlation = @(c,x) c(2)*(delLMax - x).^c(1).*exp(c(3)*(delLMax - x))+tauBot(mask(end));
+correlation = @(c,x) c(2)*(delLMax - x).^c(1).*exp(c(3)*(delLMax - x))+tauMd;
 objective   = @(c) norm(correlation(c,delLBot(mask)) - tauBot(mask),2);
 c = [+5.0078747086862485E-01,-1.7094702725985575E+00,+5.9770012891167834E+00];
 c = fminsearch(objective,c);

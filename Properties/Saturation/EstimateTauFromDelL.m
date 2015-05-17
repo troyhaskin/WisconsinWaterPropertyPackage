@@ -39,7 +39,7 @@ function tau = EstimateTauFromDelL(delL)
     Zone5           = (delL <  delLNear) & (delL >= delLCrit);
     
     tau = delL * 0;
-    tau(Zone1) = TauGuessZone1(delL(Zone1)); % Constat valuedue to the multi-valuedness of this region
+    tau(Zone1) = TauGuessZone1(delL(Zone1)); % Constant value for the DMVS region
     tau(Zone2) = TauGuessZone2(delL(Zone2));
     tau(Zone3) = TauGuessZone3(delL(Zone3));
     tau(Zone4) = TauGuessZone4(delL(Zone4));
@@ -64,7 +64,9 @@ function tau = TauGuessZone1(delL)
 %     mu  = [  +3.1052042484E+000,+1.4988549232E-004];
 %     tau = HornersMethod(delL,c,mu);
     
-    tau = delL * 0 + 2.3346;
+    [~,tau] = tausAtSaturableDeltas();
+    tau     = delL*0 + tau;
+
 end
 
 function tau = TauGuessZone2(delL)

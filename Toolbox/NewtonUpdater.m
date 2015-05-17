@@ -95,12 +95,12 @@ end
 
 function [dxNowBT,dxNextBT,RnewBT] = Backtrack(xk,dxNow,iUpdate,Rbest,Update,alpha)
     
-    dxNowBT  = xk           ;
-    dxNextBT = xk           ;
+    dxNowBT  = xk*0         ;
+    dxNextBT = xk*0         ;
     RnewBT   = Rbest        ;
     iDone    = 1:size(xk,1) ;
     
-    while not(isempty(iUpdate)) && all(abs(dxNow(:))>0)
+    while not(isempty(iUpdate)) && all(abs(dxNow(:))>eps())
         dxNow         = alpha * dxNow               ;
         
         [dxNext,Rnew] = Update(xk - dxNow,iUpdate)  ;

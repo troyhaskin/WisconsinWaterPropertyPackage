@@ -1,5 +1,5 @@
 function Tolerance = DefaultMaximumIterationCount()
     
-    Tolerance = 500;
+    Tolerance = 30;
     
 end
