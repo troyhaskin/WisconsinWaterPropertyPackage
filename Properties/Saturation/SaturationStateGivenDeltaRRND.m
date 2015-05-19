@@ -123,19 +123,18 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
         IterMax     = DefaultMaximumIterationCount();
 
         % Fill guess matrix
-        Guess = [[delGguess(1:NgivenL);delLguess(NgivenL+1:end)],...
-                   tauGuess];
-        Guess = Guess(WillIterate,:);
+        Guess     = [[delGguess(1:NgivenL);delLguess(NgivenL+1:end)],...
+                                    tauGuess];
+        Guess     = Guess(WillIterate,:);
+        nLIterate = nnz(delGiven(WillIterate) > 1);
 
         % Update handle
-        nLiquidIterate = nnz(delGiven(WillIterate) > 1);
-        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,delGiven(WillIterate),nLiquidIterate);
+        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,delGiven(WillIterate),nLIterate);
 
         % Newton solution
         Solution = NewtonUpdater(Updater,Guess,Tolerance,IterMax,true);
     else
         Solution       = delGiven(:,[1,1])  ;
-        nLiquidIterate = 0                  ;
     end
     
     % Allocations
@@ -234,10 +233,8 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
     tauHelm = [tauLL;tauLL;tauGG;tauGG];
 
     % Call the required HFE functions
-    PhiR    = HelmholtzResidual   (delHelm,tauHelm);
-    PhiR_d  = HelmholtzResidual_d (delHelm,tauHelm);
+    [PhiR,PhiR_d,PhiR_dd] = HelmholtzResidualCombo__d_dd(delHelm,tauHelm);
     PhiR_t  = HelmholtzResidual_t (delHelm,tauHelm);
-    PhiR_dd = HelmholtzResidual_dd(delHelm,tauHelm);
     PhiR_dt = HelmholtzResidual_dt(delHelm,tauHelm);
     
     % Unpack values
