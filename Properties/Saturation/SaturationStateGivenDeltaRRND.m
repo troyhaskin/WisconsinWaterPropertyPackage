@@ -233,9 +233,7 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
     tauHelm = [tauLL;tauLL;tauGG;tauGG];
 
     % Call the required HFE functions
-    [PhiR,PhiR_d,PhiR_dd] = HelmholtzResidualCombo__d_dd(delHelm,tauHelm);
-    PhiR_t  = HelmholtzResidual_t (delHelm,tauHelm);
-    PhiR_dt = HelmholtzResidual_dt(delHelm,tauHelm);
+    [PhiR,PhiR_d,PhiR_t,PhiR_dt,PhiR_dd] = HelmholtzResidualCombo__d_t_dt_dd(delHelm,tauHelm);
     
     % Unpack values
     Chunks = [NgivenL,NgivenL,NgivenG,NgivenG];

@@ -102,7 +102,7 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,var
         
         %   Define the three interpolation points used for two-phase solution
         tauk   = [tauLo(isSaturated),tauGuess(isSaturated),tauHi(isSaturated)];
-        iMix   = LocalMixtureInternalEnergy(delta(isSaturated),tauk(:,2))     ;
+        iMix   = LocalMixtureInternalEnergy(delta(isSaturated),tauk(:,2),[],[])     ;
         Rk     = [iLo(isSaturated),iMix,iHi(isSaturated)] - iwork(:,[1,1,1]);
         [Rk,I] = sort(Rk,2);
         n      = nnz(isSaturated);
@@ -161,7 +161,10 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
     delL    = tau       ;
     delG    = tau       ;
     taukp1  = tau       ;
-    
+    delLkp1 = tau       ;
+    delGkp1 = tau       ;
+    iNDmix  = tau       ;
+    Pndkp1  = tau       ;
     
     %   Check for zeroth-guess convergence
     Converged    = abs(Rk) < tolerance;
@@ -178,10 +181,8 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
         tau(Ipush)    = tauk(Converged) ;
         
         %   Update non-tau values
-        [~,Pndkp1,delLkp1,delGkp1] = LocalMixtureInternalEnergy(delta(Ipush),tau(Ipush));
-        Pnd(Ipush)  = Pndkp1    ;
-        delL(Ipush) = delLkp1   ;
-        delG(Ipush) = delGkp1   ;
+        [~,Pnd(Ipush),delL(Ipush),delG(Ipush)] = ...
+            LocalMixtureInternalEnergy(delta(Ipush),tau(Ipush),[],[]);
         
         % Contract any pre-converged values
         taukm2  = taukm2 (NotConverged) ;
@@ -193,9 +194,9 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
         Rk      = Rk     (NotConverged) ;
         iND     = iND    (NotConverged) ;
         delta   = delta  (NotConverged) ;
+        iNDmix  = iNDmix (NotConverged) ;
         
     end
-
 
     %   Create interpolation function handles
     invQuadInterp = @(varargin) inverseQuadraticInterpolation(varargin{:})  ;
@@ -217,7 +218,12 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
             evaluateWithFilter(secUpdate,updateSecant,taukm1,tauk,Rkm1,Rk);
 
         %   Residual calculation
-        [iNDmix,Pndkp1,delLkp1,delGkp1] = LocalMixtureInternalEnergy(delta,taukp1);
+        mask = abs(Rk) > 1E-13;
+        [iNDmix(mask),Pndkp1(mask),delLkp1(mask),delGkp1(mask)] = ...
+                LocalMixtureInternalEnergy(delta(mask),taukp1(mask),[],[]);
+        mask = not(mask);
+        [iNDmix(mask),Pndkp1(mask),delLkp1(mask),delGkp1(mask)] = ...
+                LocalMixtureInternalEnergy(delta(mask),taukp1(mask),delLkp1(mask),delGkp1(mask));
         Rkp1   = iNDmix - iND;
         
         %   Convergence check
@@ -245,6 +251,10 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
         Rk      = Rkp1   (NotConverged);
         iND     = iND    (NotConverged);
         delta   = delta  (NotConverged);
+        delLkp1 = delLkp1(NotConverged);
+        delGkp1 = delGkp1(NotConverged);
+        iNDmix  = delta;
+        Pndkp1  = delta;
         
         % Loop break check
         iter    = iter + 1;
@@ -281,10 +291,10 @@ end
 
 
 
-function [iNDmix,Pnd,delL,delG] = LocalMixtureInternalEnergy(del,tau)
+function [iNDmix,Pnd,delL,delG] = LocalMixtureInternalEnergy(del,tau,delL,delG)
     
     % Get the saturation state
-    [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau);
+    [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL,delG);
     
     % Calculate the mixture internal energy
     x     = QualityFromDensity(del,delL,delG);

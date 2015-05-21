@@ -1,6 +1,9 @@
 function [Helm,Helm_d,Helm_dd] = HelmholtzResidualCombo__d_dd(delta,tau)
     
-    [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
+    persistent c d t n alpha beta gamma epsilon A B C D a b
+    if isempty(c)
+        [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
+    end
     
     deltaMod  = (delta - 1).^2 + eps(delta) ;
     betaInv   = 1 ./ beta                   ;
