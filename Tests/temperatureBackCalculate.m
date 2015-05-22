@@ -3,8 +3,8 @@ clear();
 
 
 %   Quality and tau
-Nx  = 50;
-Nt  = 50;
+Nx  = 75;
+Nt  = 75;
 x   = repmat(linspace(0,1,Nx)',Nt,1);
 tau = linspace(1.000001*CriticalTemperatureR(),TriplePointTau(),Nt)';
 

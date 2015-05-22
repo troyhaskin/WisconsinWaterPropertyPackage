@@ -199,7 +199,7 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
     end
 
     %   Create interpolation function handles
-    invQuadInterp = @(varargin) inverseQuadraticInterpolation(varargin{:})  ;
+    invQuadInterp = @(varargin) discreteHalleyUpdate(varargin{:})  ;
     secUpdate     = @(varargin) secantUpdate(varargin{:})                   ;
 
     
@@ -207,10 +207,11 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
     while notDone
         
         %   Form filter
-        updateSecant           = abs(Rk) > 1E-14    ;
+        updateSecant           = abs(Rk) > 1    ;
         updateInverseQuadratic = not(updateSecant)  ;
         
         
+%         (taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
         %   Compute next iterate
         taukp1(updateInverseQuadratic) = ...
             evaluateWithFilter(invQuadInterp,updateInverseQuadratic,taukm2,taukm1,tauk,Rkm2,Rkm1,Rk);
@@ -265,14 +266,6 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(taukm2,taukm1,tauk,Rkm2,Rkm1,
     
 end
 
-
-function taukp1 = inverseQuadraticInterpolation(taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
-    %   Inverse quadratic interpolation afterward
-    taukp1 = Rkm1.*Rk  ./((Rkm2-Rkm1).*(Rkm2-Rk) + eps()) .* taukm2 + ...
-             Rkm2.*Rk  ./((Rkm1-Rkm2).*(Rkm1-Rk) + eps()) .* taukm1 + ...
-             Rkm2.*Rkm1./((Rkm2-Rk  ).*(Rkm1-Rk) + eps()) .* tauk   ;
-end
-
 function taukp1 = secantUpdate(taukm1,tauk,Rkm1,Rk)
     %   Secant method
     taukp1 = tauk - Rk .* (tauk - taukm1) ./ (Rk - Rkm1);
@@ -286,6 +279,28 @@ function taukp1 = secantUpdate(taukm1,tauk,Rkm1,Rk)
         mask         = (taukp1 > TriplePointTau()) | (taukp1 < 1)                   ;
     end
 
+end
+
+function taukp1 = discreteHalleyUpdate(taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
+    %   Secant method
+    idtaukkm1   = 1./(tauk   - taukm1 + eps());
+    idtaukkm2   = 1./(tauk   - taukm2 + eps());
+    idtaukm1km2 = 1./(taukm1 - taukm2 + eps());
+    
+    DRk  = (idtaukkm1 + idtaukkm2).*Rk  - (idtaukkm1 + idtaukm1km2).*Rkm1 + (idtaukm1km2 - idtaukkm2).*Rkm2;
+    DDRk = 2*((idtaukkm1 .* idtaukkm2).*Rk - (idtaukkm1 .* idtaukm1km2).*Rk + (idtaukkm2 .* idtaukm1km2).*Rk);
+    
+    taukp1 = tauk - 2*Rk.*DRk./ (2*DRk.^2 - Rk.* DDRk);
+    
+    mask = (taukp1 > TriplePointTau()) | (taukp1 < 1);
+    alpha       = 0.5                                       ;
+    while any(mask)
+        dx           = 2*Rk(mask).*DRk(mask)./ (2*DRk(mask).^2 - Rk(mask).* DDRk(mask)) ;
+        taukp1(mask) = tauk(mask) - alpha*dx                                            ;
+        alpha        = 0.5*alpha                                                        ;
+        mask         = (taukp1 > TriplePointTau()) | (taukp1 < 1)                       ;
+    end
+   
 end
 
 
