@@ -6,14 +6,14 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     end
     
     % Reduced liquid density guess value
-    if (nargin < 2) || isempty(delL0)
+    if (nargin < 2) || isempty(delL0) || any(delL0 <= 0)
         delL  = EstimateDelLFromTau(tau);
     else
         delL = delL0;
     end
     
     % Reduced gas density guess value
-    if (nargin < 3) || isempty(delG0)
+    if (nargin < 3) || isempty(delG0) || any(delG0 <= 0)
         delG  =  EstimateDelGFromTau(tau);
     else
         delG = delG0;

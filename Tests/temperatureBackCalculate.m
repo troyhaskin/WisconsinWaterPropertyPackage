@@ -3,8 +3,8 @@ clear();
 
 
 %   Quality and tau
-Nx  = 75;
-Nt  = 75;
+Nx  = 100;
+Nt  = 100;
 x   = repmat(linspace(0,1,Nx)',Nt,1);
 tau = linspace(1.000001*CriticalTemperatureR(),TriplePointTau(),Nt)';
 
@@ -24,6 +24,6 @@ tic;
 toc;
 
 %   Plot
-figure(1);
+figure(2);
     semilogy((1:numel(tauB))',abs(tau(I) - tauB));
 

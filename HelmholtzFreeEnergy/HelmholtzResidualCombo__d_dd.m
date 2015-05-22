@@ -36,6 +36,7 @@ function [Helm,Helm_d,Helm_dd] = HelmholtzResidualCombo__d_dd(delta,tau)
 
     end
     
+    
     for k = 8:51
 
         % Helper variables
