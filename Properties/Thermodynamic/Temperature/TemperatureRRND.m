@@ -18,12 +18,13 @@ function tau = TemperatureRRND(delta,iND,tau0,PhaseCheck)
     
     %   Single phase solve
     if any(onePhase)
-        tau(onePhase) = TemperatureOneRRND(delta,iND,tau0);
+        tau(onePhase) = TemperatureOneRRND(delta(onePhase),iND(onePhase),tau0(onePhase));
     end
 
     %   Two phase solve
     if any(twoPhase)
-        [~,tau(twoPhase),~,~,~] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau0);
+        [~,tau(twoPhase),~,~,~] = ...
+            SaturationStateGivenMixedRhoIRRND(delta(twoPhase),iND(twoPhase),tau0(twoPhase));
     end
     
 end
