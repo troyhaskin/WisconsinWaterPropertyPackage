@@ -1,11 +1,7 @@
 function [Helm,Helm_d,Helm_dd] = HelmholtzResidualCombo__d_dd(delta,tau)
     
-    persistent c d t n alpha beta gamma epsilon A B C D a b
-    if isempty(c)
-        [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
-    end
+    [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
     
-    deltaMod  = (delta - 1).^2 + eps(delta) ;
     betaInv   = 1 ./ beta                   ;
     Helm      = 0*delta                     ;
     Helm_d    = Helm                        ;
@@ -80,35 +76,40 @@ function [Helm,Helm_d,Helm_dd] = HelmholtzResidualCombo__d_dd(delta,tau)
         [Helm_dd,SumErr_dd] = KahanSum(Helm_dd,Part,SumErr_dd)              ;
         
     end
-    
+
+
+    notCrit  = (delta ~= 1)     ;
+    delta    = delta(notCrit)   ;
+    tau      = tau(notCrit)     ;
+    deltaMod = (delta - 1).^2   ;
     for k = 55:56
         m        = k - 51	;
         p        = k - 54	;
 
-        Theta       = GetTheta     (deltaMod,tau,A(p),betaInv(m));
-        Delta       = GetDelta     (deltaMod,Theta,B(p),a(p));
-        Psi         = GetPsi       (deltaMod,tau,C(p),D(p));
-        Psi_d       = GetPsi_d     (delta,Psi,C(p));
-        Psi_dd      = GetPsi_dd    (deltaMod,Psi,C(p));
-        Deltabi_d   = GetDeltabi_d (delta,deltaMod,Delta,Theta,A(p),B(p),a(p),b(p),betaInv(m));
-        Deltabi_dd  = GetDeltabi_dd(delta,deltaMod,Delta,Theta,A(p),B(p),a(p),b(p),betaInv(m));
+        Theta                  = GetTheta(deltaMod,tau,A(p),betaInv(m))                     ;
+        Delta                  = GetDelta(deltaMod,Theta,B(p),a(p))                         ;
+        Psi                    = GetPsi(deltaMod,tau,C(p),D(p))                             ;
+        Psi_d                  = GetPsi_d(delta,Psi,C(p))                                   ;
+        Psi_dd                 = GetPsi_dd(deltaMod,Psi,C(p))                               ;
+        [Deltabi_d,Deltabi_dd] = ...
+            GetDeltabiCombo_d_dd(delta,deltaMod,Delta,Theta,A(p),B(p),a(p),b(p),betaInv(m)) ;
 
 
         % Calculate zeroth derivative Helmholtz free energy component
         Part    = n(k) * Delta.^(b(p)) .* delta .* Psi  ;
-        [Helm,SumErr] = KahanSum(Helm,Part,SumErr)      ;
+        [Helm(notCrit),SumErr(notCrit)] = KahanSum(Helm(notCrit),Part,SumErr(notCrit))      ;
 
 
         % Calculate first derivative Helmholtz free energy component
         Part        =  Delta.^(b(p)) .* (Psi + delta .* Psi_d)  ;
         Part        = n(k)*(Part + Deltabi_d .* delta .* Psi)   ;
-        [Helm_d,SumErr_d] = KahanSum(Helm_d,Part,SumErr_d)      ;    
+        [Helm_d(notCrit),SumErr_d(notCrit)] = KahanSum(Helm_d(notCrit),Part,SumErr_d(notCrit)); 
 
 
         % Calculate second derivative Helmholtz free energy component
-        Part      = Delta.^(b(p)).*(2*Psi_d + delta.*Psi_dd)                        ;
-        Part      = Part + 2*Deltabi_d .* (Psi+delta.*Psi_d)+Deltabi_dd.*delta.*Psi ;
-        [Helm_dd,SumErr_dd] = KahanSum(Helm_dd,Part,SumErr_dd)             ;
+        Part      = Delta.^(b(p)).*(2*Psi_d + delta.*Psi_dd)                                        ;
+        Part      = Part + 2*Deltabi_d .* (Psi+delta.*Psi_d)+Deltabi_dd.*delta.*Psi                 ;
+        [Helm_dd(notCrit),SumErr_dd(notCrit)] = KahanSum(Helm_dd(notCrit),Part,SumErr_dd(notCrit))  ;
 
     end
     

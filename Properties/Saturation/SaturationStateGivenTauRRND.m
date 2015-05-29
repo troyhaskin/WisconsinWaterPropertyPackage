@@ -32,11 +32,16 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     IterMax   = DefaultMaximumIterationCount()          ; % Maximum iteration count
     Calculate = not(NearTc) & NotAboveTc & AboveTt      ; % Mask for temps. not close to the critical point
     Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
-    UpdateFun = @(x,Mask) Updater(x,Mask,tau(Calculate)); % Function used for updating the solution
+    
+    %   Perform one Newton calculation to initialize Broyden Jacobian
+    [dx,~,S.r1,S.r2,S.iJ11,S.iJ12,S.iJ21,S.iJ22] = newton(Guess,1:nnz(Calculate),tau(Calculate));
+    S.delL    = Guess(:,1);
+    S.delG    = Guess(:,2);
     
     % Solve the system
     if any(Calculate)
-        xSol = NewtonUpdater(UpdateFun,Guess,Tolerance,IterMax);
+        xSol = NewtonUpdater(@(x,mask) updater(x,mask,tau(Calculate)),Guess-dx,1E-13,IterMax);
+        xSol = NewtonUpdater(@(x,mask) newton(x,mask,tau(Calculate)),xSol,Tolerance,IterMax);
         
         % Update the iterated values
         delL(Calculate) = xSol(:,1);
@@ -55,7 +60,7 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     
     % Saturation pressure
     Pnd             = delG                                              ; % allocate
-    Pnd(NotAboveTc) = PressureOneRND(delL(NotAboveTc),tau(NotAboveTc))  ;
+    Pnd(NotAboveTc) = PressureOneRND(delG(NotAboveTc),tau(NotAboveTc))  ;
     Pnd(tau == 1)   = CriticalPressureND()                              ;
     Pnd(AboveTc | BelowTt) = 0                                          ;
     
@@ -63,11 +68,19 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     Pnd  = Pnd (UniqueMask) ;
     delL = delL(UniqueMask) ;
     delG = delG(UniqueMask) ;
+
+    
+    
+    
+    function [dx,RNorm] = updater(x,mask,tau0)
+        [dx,RNorm,S] = broyden(x,mask,tau0,S);
+%         [dx,RNorm] = newton(x,mask,tau0);
+    end
+    
     
 end
 
-
-function [dx,RNorm] = Updater(x,Mask,tau0)
+function [dx,RNorm,r1,r2,iJ11,iJ12,iJ21,iJ22] = newton(x,Mask,tau0)
     
     N    = length(Mask);
     tau  = [tau0(Mask);tau0(Mask)];
@@ -94,33 +107,88 @@ function [dx,RNorm] = Updater(x,Mask,tau0)
     
     
     %   Residual and partial derivative values
-    R1 = delG.*Psig1 - PdelL.*delLmG;
-    R2 = delL.*Psig1 - PdelG.*delLmG;
+    r1 = delG.*Psig1 - PdelL.*delLmG;
+    r2 = delL.*Psig1 - PdelG.*delLmG;
     
-    R1_dL = delG.*Psig1_dL - (delLmG.*PdelL_d + PdelL)  ;
-    R1_dG = Psig1 + delG.*Psig1_dG + PdelL              ;
+    r1_dL = delG.*Psig1_dL - (delLmG.*PdelL_d + PdelL)  ;
+    r1_dG = Psig1 + delG.*Psig1_dG + PdelL              ;
     
-    R2_dL = Psig1 - PdelG  + delL.*Psig1_dL;
-    R2_dG = delL.*Psig1_dG - (delLmG.*PdelG_d - PdelG);
+    r2_dL = Psig1 - PdelG  + delL.*Psig1_dL;
+    r2_dG = delL.*Psig1_dG - (delLmG.*PdelG_d - PdelG);
 
     
     % Determinant
-    DetJ = R1_dL .* R2_dG - R1_dG .*R2_dL;
+    DetJ = r1_dL .* r2_dG - r1_dG .*r2_dL;
     
     % Inverse Jacobian elements
-    iJ11 =  R2_dG ./ DetJ;
-    iJ12 = -R1_dG ./ DetJ;
-    iJ21 = -R2_dL ./ DetJ;
-    iJ22 =  R1_dL ./ DetJ;
+    iJ11 =  r2_dG ./ DetJ;
+    iJ12 = -r1_dG ./ DetJ;
+    iJ21 = -r2_dL ./ DetJ;
+    iJ22 =  r1_dL ./ DetJ;
 
 
     % Newton updates
-    ddelL = iJ11 .* R1 + iJ12 .* R2;
-    ddelG = iJ21 .* R1 + iJ22 .* R2;
+    ddelL = iJ11 .* r1 + iJ12 .* r2;
+    ddelG = iJ21 .* r1 + iJ22 .* r2;
     
     % Pack updates and calculate norm for the Newton updater
-    dx    = [ddelL,ddelG];
-    RNorm = abs(R1) + abs(R2);
+    dx    = [ddelL,ddelG]       ;
+    RNorm = abs(r1) + abs(r2)   ;
+
+end
+
+
+function [dx,RNorm,S] = broyden(xk,mask,tau0,S)
+    
+    N    = length(mask);
+    tau  = [tau0(mask);tau0(mask)];
+    delL = xk(:,1);
+    delG = xk(:,2);
+    
+    
+    %   Helmholtz Free Energy values
+    [PhiR,PhiR_d]                 = HelmholtzResidualCombo__d([delL;delG],tau)  ;
+    [PhiRL,PhiRG,PhiR_dL,PhiR_dG] = VectorChunk([PhiR;PhiR_d],N)                ;
+    
+    %   Terms used to form the residuals
+    Psig1  = PhiRL - PhiRG + log(delL./delG);
+    PdelL  = 1 + delL.*PhiR_dL              ;
+    PdelG  = 1 + delG.*PhiR_dG              ;
+
+    %   Residual and partial derivative values
+    r1 = delG.*Psig1 - PdelL.*(delL-delG);
+    r2 = delL.*Psig1 - PdelG.*(delL-delG);
+    
+    % Form deltas
+    dx1  = delL - S.delL(mask)  ;
+    dx2  = delG - S.delG(mask)  ;
+    dr1  = r1   - S.r1(mask)    ;
+    dr2  = r2   - S.r2(mask)    ;
+    drN  = dr1.^2 + dr2.^2      ;
+    
+    % Update Inverse Jacobian
+    term         = (dx1 - S.iJ11(mask).*dr1 - S.iJ12(mask).*dr2)./drN;
+    S.iJ11(mask) = S.iJ11(mask) + dr1.*term;
+    S.iJ12(mask) = S.iJ12(mask) + dr2.*term;
+    term         = (dx2 - S.iJ21(mask).*dr1 - S.iJ22(mask).*dr2)./drN;
+    S.iJ21(mask) = S.iJ21(mask) + dr1.*term;
+    S.iJ22(mask) = S.iJ22(mask) + dr2.*term;
+
+
+    % Newton updates
+    ddelL = S.iJ11(mask) .* r1 + S.iJ12(mask) .* r2;
+    ddelG = S.iJ21(mask) .* r1 + S.iJ22(mask) .* r2;
+    
+    % Pack updates and calculate norm for the Newton updater
+    dx    = [ddelL,ddelG]       ;
+    RNorm = abs(r1) + abs(r2)   ;
+    
+    
+    %   Update struct elements
+    S.delL(mask) = delL     ;
+    S.delG(mask) = delG     ;
+    S.r1(mask)   = r1       ;
+    S.r2(mask)   = r2       ;
 
 end
 

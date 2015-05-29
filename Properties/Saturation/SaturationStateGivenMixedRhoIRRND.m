@@ -1,9 +1,7 @@
-function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,varargin)
+function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tauGuess)
     
     %   Input patterns:
-    %       o SaturationStateGivenMixedRhoIRRND(delMix,iND,PhaseCheck,iMixND)
-    %       o SaturationStateGivenMixedRhoIRRND(delMix,iND,PhaseCheck,iMixND,tauSat,iSatND)
-    %       o SaturationStateGivenMixedRhoIRRND(delMix,iND,PhaseCheck,iMixND,tauSat,iSatND,tauGuess)
+    %       o SaturationStateGivenMixedRhoIRRND(delMix,iND,tauGuess)
     %
     %   For this function, properties explicitly coded as <S/sat> refer to purely saturated
     %   (x = 0 or 1 only) properties on the delMix isochor (delSat = delMix).  While all
@@ -12,23 +10,21 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,var
     %   therefore, the <S/sat> values allow the secant method to bounded/guarded.
     %
     
+    % Default/optional arguments
+    if (nargin < 3)
+        tauGuess = [];
+    end
     
-    % Calculate the mixture internal energy on the triple line
-    [delLt,delGt] = TriplePointDensitiesR()                 ;
+    
+    %   Calculate the mixture internal energy on the triple line
+    [delLt,delGt] = TriplePointDeltas()                     ;
     [iLNDt,iGNDt] = TriplePointInternalEnergiesND()         ;
     taut          = TriplePointTau()                        ;
     xt            = QualityFromDensity(delta,delLt,delGt)   ;
     iNDt          = iLNDt + xt.*(iGNDt - iLNDt)             ;
-    
-    
-    % Default/optional arguments
-    OptionalArguments = {true,[],[],[]}             ;   % Allocate with defaults
-    nOptionalIn       = length(varargin)            ;   % Number of optionals passed
-    OptionalArguments(1:nOptionalIn) = varargin     ;   % Overwrite defaults
-    [PhaseCheck,tauSat,iSatND,tauGuess] = OptionalArguments{:}; %#ok<ASGLU>
-    
-    
-    
+
+
+
     %   Allocation
     tauHi = delta * 0   ;
     tauLo = tauHi       ;
@@ -39,44 +35,67 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,var
     delL  = tauHi       ;
     delG  = tauHi       ;
     x     = tauHi       ;
+
     
     
     % ============================================ %
     %               Exact Phase Check              %
     % ============================================ %
-    
+
+    %   Catch any points on the triple line
+    isTripleTau      = abs(iNDt - iND) < eps()                                                  ;
+    isCriticalTau    = abs(delta - 1)  < eps() & abs(iND - DimensioningInternalEnergy()) < eps();
+    isNotTripleTau   = not(isTripleTau)                                                         ;
+    isNotCriticalTau = not(isCriticalTau)                                                       ;
+
+
     %   The two regions of the Vapor dome
     lessThanTriple = delta < delLt      ;
     inDMVS         = not(lessThanTriple);
     
-    if any(lessThanTriple)
+    
+    %   Handle triple and critical states
+    iLo(isTripleTau)   = iNDt(isTripleTau)              ;
+    iHi(isTripleTau)   = iNDt(isTripleTau)              ;
+    tau(isTripleTau)   = taut                           ;
+    iLo(isCriticalTau) = DimensioningInternalEnergy()   ;
+    iHi(isCriticalTau) = DimensioningInternalEnergy()   ;
+    tau(isCriticalTau) = 1                              ;
+
+    
+    %   Non-DMVS region saturation calculation
+    calculate = lessThanTriple & isNotTripleTau & isNotCriticalTau;
+    if any(calculate)
         
         %   non-DMVS region taus
-        [~,tauLo(lessThanTriple),~,~] = SaturationStateGivenDeltaRRND(delta(lessThanTriple));
-        tauHi(lessThanTriple)         = taut                                                ;
+        [~,tauLo(calculate),~,~] = SaturationStateGivenDeltaRRND(delta(calculate))  ;
+        tauHi(calculate)         = taut                                             ;
         
         %   non-DMVS region iND
-        iLo(lessThanTriple) = InternalEnergyOneRND(delta(lessThanTriple),tauLo(lessThanTriple));
-        iHi(lessThanTriple) = iNDt(lessThanTriple)                                             ;
+        iLo(calculate) = InternalEnergyOneRND(delta(calculate),tauLo(calculate));
+        iHi(calculate) = iNDt(calculate)                                        ;
     end
     
-    
-    if any(inDMVS)
+
+    %   DMVS region saturation calculation
+    calculate = inDMVS & isNotTripleTau & isNotCriticalTau;
+    if any(calculate)
         
         %   DMVS region taus
-        deltaDMVS             = delta(inDMVS)                                                   ;
+        deltaDMVS             = delta(calculate)                                                ;
         tauBotTop             = estimateTauDMVSRegion(deltaDMVS)                                ;
         [~,tauNearTriple,~,~] = SaturationStateGivenDeltaRRND([deltaDMVS;deltaDMVS],tauBotTop)  ;
-        tauLo(inDMVS)         = tauNearTriple(   1   :end/2)                                    ;
-        tauHi(inDMVS)         = tauNearTriple(end/2+1: end )                                    ;
+        tauLo(calculate)         = tauNearTriple(   1   :end/2)                                 ;
+        tauHi(calculate)         = tauNearTriple(end/2+1: end )                                 ;
         
         %   DMVS region iND
-        iLoHi       = InternalEnergyOneRND([deltaDMVS;deltaDMVS],[tauLo(inDMVS);tauHi(inDMVS)]) ;
-        iLo(inDMVS) = iLoHi(   1   :end/2)                                                      ;
-        iHi(inDMVS) = iLoHi(end/2+1: end )                                                      ;
+        iLoHi       = InternalEnergyOneRND([deltaDMVS;deltaDMVS],[tauLo(calculate);tauHi(calculate)])   ;
+        iLo(calculate) = iLoHi(   1   :end/2)                                                           ;
+        iHi(calculate) = iLoHi(end/2+1: end )                                                           ;
         
     end
-    
+
+
     %   Check upper bound
     isSaturated = (iLo - iND) > eps();
     
@@ -94,40 +113,41 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,var
     % ============================================ %
     %                Two Phase Solve               %
     % ============================================ %
-    if any(isSaturated)
+    calculate = isSaturated & isNotTripleTau & isNotCriticalTau;
+    if any(calculate)
         
         %   Help variable
-        iwork = iND(isSaturated)    ;
+        iwork = iND(calculate)    ;
 
         
         %   Calculate guess internal energy
-        iMix = LocalMixtureInternalEnergy(delta(isSaturated),tauGuess(isSaturated),[],[]);
+        iMix = LocalMixtureInternalEnergy(delta(calculate),tauGuess(calculate));
         
         %   Make one more guess (this eliminates the end points to improve convergence)
-        tauk     = [tauLo(isSaturated),tauGuess(isSaturated),tauHi(isSaturated)]    ;
-        ik       = [iLo(isSaturated),iMix,iHi(isSaturated)]                         ;
+        tauk     = [tauLo(calculate),tauGuess(calculate),tauHi(calculate)]          ;
+        ik       = [iLo(calculate),iMix,iHi(calculate)]                             ;
         Rk       = ik - iwork(:,[1,1,1])                                            ;
         tauGuess = (tauk(:,1).*(Rk(:,2)<0) + tauk(:,2) + tauk(:,3).*(Rk(:,2)>=0))/2 ;
         tauk     = [tauk,tauGuess]                                                  ;
-        iMix     = LocalMixtureInternalEnergy(delta(isSaturated),tauGuess,[],[])    ;
+        iMix     = LocalMixtureInternalEnergy(delta(calculate),tauGuess)            ;
         Rk       = [ik,iMix] - iwork(:,[1,1,1,1])                                   ;
         
         %   Order the residuals
-        Sign   = sign(Rk)                                   ;
-        [Rk,I] = sort(abs(Rk),2)                            ;
-        n      = nnz(isSaturated)                           ;
-        I      = sub2ind(size(tauk),[1:n;1:n;1:n;1:n]',I)   ;
-        Rk     = Rk .* Sign(I)                              ;
-        tauk   = tauk(I)                                    ;
+        Sign   = sign(Rk)                               ;
+        [Rk,I] = sort(abs(Rk),2)                        ;
+        n      = (1:nnz(calculate))'                    ;
+        I      = sub2ind(size(tauk),n(:,[1,1,1,1]),I)   ;
+        Rk     = Rk .* Sign(I)                          ;
+        tauk   = tauk(I)                                ;
         
         %   Solve for tau
-        [Pnd(isSaturated),tau(isSaturated),delL(isSaturated),delG(isSaturated)] = ...
-            solveTwoPhaseSystem(tauk(:,1:3),Rk(:,1:3),delta(isSaturated),iwork);
+        [Pnd(calculate),tau(calculate),delL(calculate),delG(calculate)] = ...
+            solveTwoPhaseSystem(tauk(:,1:3),Rk(:,1:3),delta(calculate),iwork);
         
         %   Solve for other variables
         %         [Pnd(isSaturated),delL(isSaturated),delG(isSaturated)] = ...
         %             SaturationStateGivenTauRRND(tau(isSaturated));
-        x(isSaturated) = QualityFromDensity(delta(isSaturated),delL(isSaturated),delG(isSaturated));
+        x(calculate) = QualityFromDensity(delta(calculate),delL(calculate),delG(calculate));
     end
     
     
@@ -135,21 +155,21 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,var
     % ============================================ %
     %                One Phase Solve               %
     % ============================================ %
-    notSaturated = not(isSaturated);
-    if any(notSaturated)
+    calculate = not(isSaturated) & isNotTripleTau & isNotCriticalTau;
+    if any(calculate)
         
-        work = delta(notSaturated);
+        work = delta(calculate);
         
         %   Get a one-phase tau guess
         tauGuess = (1-belowDMVS).*tauLo + belowDMVS.*tauHi  ;
-        tauGuess = tauGuess(notSaturated)                   ;
+        tauGuess = tauGuess(calculate)                      ;
         
         %   Call one-phase solver
-        tau (notSaturated) = TemperatureOneRRND(work,iND(notSaturated),tauGuess);
-        delL(notSaturated) = work                                               ;
-        delG(notSaturated) = work                                               ;
-        Pnd (notSaturated) = PressureOneRND(work,tau(notSaturated))             ;
-        x   (notSaturated) = NaN                                                ;
+        tau (calculate) = TemperatureOneRRND(work,iND(calculate),tauGuess)  ;
+        delL(calculate) = work                                              ;
+        delG(calculate) = work                                              ;
+        Pnd (calculate) = PressureOneRND(work,tau(calculate))               ;
+        x   (calculate) = NaN                                               ;
     end
     
     
@@ -180,176 +200,127 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(tauk,Rk,delta,iND)
     Pnd     = tau       ;
     delL    = tau       ;
     delG    = tau       ;
-    taukp1  = tau       ;
-    delLkp1 = tau       ;
-    delGkp1 = tau       ;
-    iNDmix  = tau       ;
-    Pndkp1  = tau       ;
+%     taukp1  = tau       ;
+%     delLkp1 = tau       ;
+%     delGkp1 = tau       ;
+%     iNDmix  = tau       ;
+%     Pndkp1  = tau       ;
     
     %   Check for zeroth-guess convergence
     convergedStepWise = abs(tauk-taukm1) < tolerance;
     convergedResidual = abs(Rk)          < tolerance;
     stagnantResidual  = abs(Rk - Rkm1)   < eps()    ;
-    Converged         = convergedStepWise | convergedResidual | stagnantResidual;
-    NotConverged      = not(Converged);
+    converged         = convergedStepWise | convergedResidual | stagnantResidual;
+    notConverged      = not(converged);
     
     %   Update converged index array
-    Ipush         = InotConverged(Converged)    ;
-    InotConverged = InotConverged(NotConverged) ;
+    Ipush         = InotConverged(converged)    ;
+    InotConverged = InotConverged(notConverged) ;
     
     
-    if any(Converged)
+    if any(converged)
         
         %   Update any pre-converged values
-        tau(Ipush)    = tauk(Converged) ;
+        tau(Ipush)    = tauk(converged) ;
         
         %   Update non-tau values
         [~,Pnd(Ipush),delL(Ipush),delG(Ipush)] = ...
-            LocalMixtureInternalEnergy(delta(Ipush),tau(Ipush),[],[]);
+            LocalMixtureInternalEnergy(delta(Ipush),tau(Ipush));
         
         % Contract any pre-converged values
-        taukm2  = taukm2 (NotConverged) ;
-        taukm1  = taukm1 (NotConverged) ;
-        tauk    = tauk   (NotConverged) ;
-        taukp1  = tauk                  ;
-        Rkm2    = Rkm2   (NotConverged) ;
-        Rkm1    = Rkm1   (NotConverged) ;
-        Rk      = Rk     (NotConverged) ;
-        iND     = iND    (NotConverged) ;
-        delta   = delta  (NotConverged) ;
-        iNDmix  = iNDmix (NotConverged) ;
+        taukm2  = taukm2 (notConverged) ;
+        taukm1  = taukm1 (notConverged) ;
+        tauk    = tauk   (notConverged) ;
+%         taukp1  = tauk                  ;
+        Rkm2    = Rkm2   (notConverged) ;
+        Rkm1    = Rkm1   (notConverged) ;
+        Rk      = Rk     (notConverged) ;
+        iND     = iND    (notConverged) ;
+        delta   = delta  (notConverged) ;
+%         iNDmix  = iNDmix (NotConverged) ;
         
     end
     
-    %   Create interpolation function handles
-    invQuadInterp = @(varargin) discreteHalleyUpdate(varargin{:})   ;
-    secUpdate     = @(varargin) secantUpdate(varargin{:})           ;
+%     %   Create interpolation function handles
+%     disHalleyUpdate = @(varargin) discreteHalleyUpdate(varargin{:})   ;
+%     disNewtonUpdate = @(varargin) discreteNewtonUpdate(varargin{:})           ;
     
     
     % Enter Iterative loop
     while notDone
-        
-        %   Form filter
-        updateSecant           = (abs(Rk) > 1) | (abs(tauk-taukm2) < eps())   ;
-        updateInverseQuadratic = not(updateSecant)                              ;
-        
-        
-        %         (taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
+
         %   Compute next iterate
-        taukp1(updateInverseQuadratic) = ...
-            evaluateWithFilter(invQuadInterp,updateInverseQuadratic,taukm2,taukm1,tauk,Rkm2,Rkm1,Rk);
-        taukp1(updateSecant) = ...
-            evaluateWithFilter(secUpdate,updateSecant,taukm1,tauk,Rkm1,Rk);
-        
+        taukp1 = discreteNewtonUpdate(taukm2,taukm1,tauk,Rkm2,Rkm1,Rk);
+       
         %   Residual calculation
-        mask = (abs(Rk) > 1E-13);
-        if any(mask)
-            [iNDmix(mask),Pndkp1(mask),delLkp1(mask),delGkp1(mask)] = ...
-                LocalMixtureInternalEnergy(delta(mask),taukp1(mask),[],[]);
-        end
-        mask = not(mask);
-        if any(mask)
-            [iNDmix(mask),Pndkp1(mask),delLkp1(mask),delGkp1(mask)] = ...
-                LocalMixtureInternalEnergy(delta(mask),taukp1(mask),delLkp1(mask),delGkp1(mask));
-        end
+        [iNDmix,Pndkp1,delLkp1,delGkp1] = LocalMixtureInternalEnergy(delta,taukp1);
         Rkp1   = iNDmix - iND;
         
         %   Convergence check
         convergedStepWise = abs(taukp1-tauk) < tolerance                            ;
         convergedResidual = abs(Rkp1)        < tolerance                            ;
         stagnantResidual  = abs(Rkp1 - Rk)   < eps()                                ;
-        Converged         = convergedStepWise | convergedResidual | stagnantResidual;
-        NotConverged      = not(Converged);
+        converged         = convergedStepWise | convergedResidual | stagnantResidual;
+        notConverged      = not(converged);
         
         % Update index array
-        Ipush         = InotConverged(Converged);
-        InotConverged = InotConverged(NotConverged);
-        
+        Ipush         = InotConverged(converged);
+        InotConverged = InotConverged(notConverged);
         
         % Push converged values
-        tau(Ipush)  = taukp1(Converged) ;
-        Pnd(Ipush)  = Pndkp1(Converged) ;
-        delL(Ipush) = delLkp1(Converged);
-        delG(Ipush) = delGkp1(Converged);
+        tau(Ipush)  = taukp1(converged) ;
+        Pnd(Ipush)  = Pndkp1(converged) ;
+        delL(Ipush) = delLkp1(converged);
+        delG(Ipush) = delGkp1(converged);
         
         % Contract all other vectors
-        taukm2  = taukm1 (NotConverged);
-        taukm1  = tauk   (NotConverged);
-        tauk    = taukp1 (NotConverged);
-        taukp1  = tauk                 ;
-        Rkm2    = Rkm1   (NotConverged);
-        Rkm1    = Rk     (NotConverged);
-        Rk      = Rkp1   (NotConverged);
-        iND     = iND    (NotConverged);
-        delta   = delta  (NotConverged);
-        delLkp1 = delLkp1(NotConverged);
-        delGkp1 = delGkp1(NotConverged);
-        iNDmix  = delta;
-        Pndkp1  = delta;
+        taukm2  = taukm1 (notConverged);
+        taukm1  = tauk   (notConverged);
+        tauk    = taukp1 (notConverged);
+        Rkm2    = Rkm1   (notConverged);
+        Rkm1    = Rk     (notConverged);
+        Rk      = Rkp1   (notConverged);
+        iND     = iND    (notConverged);
+        delta   = delta  (notConverged);
         
         % Loop break check
         iter    = iter + 1;
-        notDone = any(NotConverged) && (iter < iterMax);
+        notDone = any(notConverged) && (iter < iterMax);
         
     end
-    disp(iter);
     
 end
 
-function taukp1 = secantUpdate(taukm1,tauk,Rkm1,Rk)
+function taukp1 = discreteNewtonUpdate(taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
     %   Secant method
-    dx     = Rk .* (tauk - taukm1) ./ (Rk - Rkm1)   ;
-    taukp1 = tauk - dx                              ;
+    dx1 = tauk - taukm1;
+    dx2 = tauk - taukm2;
+    DRk = (1./dx1+1./dx2).*Rk + dx2./(dx1.^2-dx1.*dx2).*Rkm1+dx1./(dx2.*(dx2-dx1)).*Rkm2;
     
-    %   Guard
-    mask = (taukp1 > TriplePointTau()) | (taukp1 < 1)   ;
-    alpha       = 0.5                                   ;
+    dx     = Rk ./DRk               ;
+    taukp1 = guardedStep(tauk,dx)   ;
+    
+end
+
+function taukp1 = guardedStep(tau,dx)
+    
+    taukp1 = tau - dx                                   ;
+    mask   = (taukp1 > TriplePointTau()) | (taukp1 < 1) ;
+    alpha  = 1                                          ;
+
     while any(mask)
-        taukp1(mask) = tauk(mask) - alpha*dx(mask)                  ;
+        taukp1(mask) = tau(mask) - alpha*dx(mask)                   ;
         alpha        = 0.5*alpha                                    ;
         mask         = (taukp1 > TriplePointTau()) | (taukp1 < 1)   ;
     end
-    
-    if any(isnan(taukp1))
-        g = [ ];
-    end
-    
+
 end
 
 
-function taukp1 = discreteHalleyUpdate(taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
-    %   Secant method
-    idtaukkm1   = 1./(tauk   - taukm1);
-    idtaukkm2   = 1./(tauk   - taukm2);
-    idtaukm1km2 = 1./(taukm1 - taukm2);
-    
-    DRk  = (idtaukkm1 + idtaukkm2).*Rk  - (idtaukkm1 + idtaukm1km2).*Rkm1 + (idtaukm1km2 - idtaukkm2).*Rkm2;
-    DDRk = 2*((idtaukkm1 .* idtaukkm2).*Rk - (idtaukkm1 .* idtaukm1km2).*Rkm1 + (idtaukkm2 .* idtaukm1km2).*Rkm2);
-    
-    dx     = 2*Rk.*DRk./ (2*DRk.^2 - Rk.* DDRk) ;
-    taukp1 = tauk - dx                          ;
-    
-    mask = (taukp1 > TriplePointTau()) | (taukp1 < 1);
-    alpha       = 0.5                                       ;
-    while any(mask)
-        taukp1(mask) = tauk(mask) - alpha*dx(mask)                  ;
-        alpha        = 0.5*alpha                                    ;
-        mask         = (taukp1 > TriplePointTau()) | (taukp1 < 1)   ;
-    end
-    
-    if any(isnan(taukp1))
-        g = [ ];
-    end
-    
-end
-
-
-
-
-function [iNDmix,Pnd,delL,delG] = LocalMixtureInternalEnergy(del,tau,delL,delG)
+function [iNDmix,Pnd,delL,delG] = LocalMixtureInternalEnergy(del,tau)
     
     % Get the saturation state
-    [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL,delG);
+    [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau);
     
     % Calculate the mixture internal energy
     x     = QualityFromDensity(del,delL,delG);
@@ -362,5 +333,33 @@ end
 
 
 
-
+% function taukp1 = discreteNewtonUpdate(taukm1,tauk,Rkm1,Rk)
+%     %   Secant method
+%     dx     = Rk .* (tauk - taukm1) ./ (Rk - Rkm1)   ;
+%     taukp1 = guardedStep(tauk,dx)                   ;
+%     
+%     if any(isnan(taukp1))
+%         g = [ ];
+%     end
+%     
+% end
+% 
+% 
+% function taukp1 = discreteHalleyUpdate(taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
+%     %   Secant method
+%     idtaukkm1   = 1./(tauk   - taukm1);
+%     idtaukkm2   = 1./(tauk   - taukm2);
+%     idtaukm1km2 = 1./(taukm1 - taukm2);
+%     
+%     DRk  = (idtaukkm1 + idtaukkm2).*Rk  - (idtaukkm1 + idtaukm1km2).*Rkm1 + (idtaukm1km2 - idtaukkm2).*Rkm2;
+%     DDRk = 2*((idtaukkm1 .* idtaukkm2).*Rk - (idtaukkm1 .* idtaukm1km2).*Rkm1 + (idtaukkm2 .* idtaukm1km2).*Rkm2);
+%     
+%     dx     = 2*Rk.*DRk./ (2*DRk.^2 - Rk.* DDRk) ;
+%     taukp1 = guardedStep(tauk,dx)               ;
+%     
+%     if any(isnan(taukp1))
+%         g = [ ];
+%     end
+%     
+% end
 

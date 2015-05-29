@@ -12,27 +12,27 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     end
 
     % Given Masks
-    GivenL = delta >  1 ;
-    GivenG = delta <  1 ;
-    GivenC = delta == 1 ;
+    givenL = delta >  1 ;
+    givenG = delta <  1 ;
+    givenC = delta == 1 ;
 
     % Ordering Masks: since the solution algorithm relies on the ordering of dels to be
     % [delL;delG], these index arrays allow insertion of the solved properties into the 
     % original ordering.
-    Ngiven    = length(delta);
-    Ioriginal = 1 : Ngiven;
-    Iordered  = [Ioriginal(GivenL),Ioriginal(GivenG),Ioriginal(GivenC)];
+    nGiven    = length(delta);
+    Ioriginal = 1 : nGiven;
+    Iordered  = [Ioriginal(givenL),Ioriginal(givenG),Ioriginal(givenC)];
 
     % Given densities
-    delLgiven = delta(GivenL)           ;
-    delGgiven = delta(GivenG)           ;
-    delGiven  = [delLgiven;delGgiven]   ; % destroys original ordering; use index arrays above
+    delLgiven = delta(givenL)                   ;
+    delGgiven = delta(givenG)                   ;
+    delCgiven = delta(givenC)                   ;
+    delGiven  = [delLgiven;delGgiven;delCgiven] ; % destroys original ordering; use index arrays above
 
     % Number of gas densities given
-    NgivenL = nnz(GivenL);
-    NgivenG = nnz(GivenG);
-    lGivenL = [ true(NgivenL,1);false(NgivenG,1)];
-    lGivenG = [false(NgivenL,1); true(NgivenG,1)];
+    nGivenL = nnz(givenL);
+    nGivenG = nnz(givenG);
+    nGivenC = nnz(givenC);
 
 
     % ================================================================================== %
@@ -65,17 +65,19 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     [delLt,~]               = TriplePointDensitiesR()               ;
     [delGmin,delLmax]       = saturableDeltas()                     ;
 
-    CanSaturate    = [delLgiven <= delLmax     ;...   % Maximum saturation density bound
-                      delGgiven >= delGmin    ];      % Minimum saturation density bound
-    DoNotIterate   = [delLgiven <= delLnearC   ;...   % Near critical point stability bound
-                      delGgiven >= delGnearC  ];      % Near critical point stability bound
-    NearTriple     = [(delLgiven >= delLt) & (delLgiven <= delLmax);false(NgivenG,1)];
-    NotNearTriple  = not(NearTriple)    ;
-    CannotSaturate = not(CanSaturate)   ;
+    %   Density is within the bounds of the vapor dome.
+    canSaturate    = [delLgiven <= delLmax ; delGgiven >= delGmin ; true(nGivenC,1)];
+    cannotSaturate = not(canSaturate)                                                       ;
+    
+    %   Near critical densities are avoided due to stability issues (near singular Jacobian)
+    shouldIterate = [delLgiven >= delLnearC ; delGgiven <= delGnearC ; false(nGivenC,1)];   
+
+    %   Density is within the DMVS region
+    nearTriple = [(delLgiven >= delLt) & (delLgiven <= delLmax) ; false(nGivenG+nGivenC,1)];
 
     % Logical index for values that will be iterated upon
-    WillGuess    = (NotNearTriple | not(useDeltaEstimation)) & CanSaturate  ;
-    WillIterate  = WillGuess     & not(DoNotIterate)                        ;
+    willGuess   = (not(nearTriple) | not(useDeltaEstimation)) & canSaturate ;
+    willIterate = willGuess & shouldIterate                                 ;
 
 
 
@@ -84,29 +86,29 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     % ================================================================================== %
     
     %   Allocation
-    delLguess = delGiven;
-    delGguess = delGiven;
-    tauGuess  = delGiven;
+    delLguess = delta;
+    delGguess = delta;
+    tauGuess  = delta;
 
 
     % Get guess values for all given density values not near the triple line
     if useDeltaEstimation
         
         %   No tau0 given
-        if any(WillGuess)
+        if any(willGuess)
             [delLguess,delGguess,tauGuess] = ...
                 AssignWithFilter(...
                     @(wg) EstimateDelLDelGTauFromDel(delGiven(wg)),...
-                    WillGuess,delLguess,delGguess,tauGuess);
+                    willGuess,delLguess,delGguess,tauGuess);
         end
 
     else
 
-         if any(CanSaturate)
+         if any(canSaturate)
             %   tau0 given
             tauGuess = tau0;
-            delLguess(GivenG & CanSaturate) = EstimateDelLFromTau(tauGuess(GivenG & CanSaturate));
-            delGguess(GivenL & CanSaturate) = EstimateDelGFromTau(tauGuess(GivenL & CanSaturate));
+            delLguess(givenG & canSaturate) = EstimateDelLFromTau(tauGuess(givenG & canSaturate));
+            delGguess(givenL & canSaturate) = EstimateDelGFromTau(tauGuess(givenL & canSaturate));
         end
 
     end
@@ -116,20 +118,19 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     %                                 Newton Solution                                    %
     % ================================================================================== %
     
-    if any(WillIterate)
+    if any(willIterate)
 
         % Iteration parameters
         Tolerance   = DefaultAbsoluteIterationTolerance();
         IterMax     = DefaultMaximumIterationCount();
 
         % Fill guess matrix
-        Guess     = [[delGguess(1:NgivenL);delLguess(NgivenL+1:end)],...
-                                    tauGuess];
-        Guess     = Guess(WillIterate,:);
-        nLIterate = nnz(delGiven(WillIterate) > 1);
+        Guess     = [[delGguess(1:nGivenL);delLguess(nGivenL+1:end)] , tauGuess];
+        Guess     = Guess(willIterate,:);
+        nLIterate = nnz(delGiven(willIterate) > 1);
 
         % Update handle
-        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,delGiven(WillIterate),nLIterate);
+        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,delGiven(willIterate),nLIterate);
 
         % Newton solution
         Solution = NewtonUpdater(Updater,Guess,Tolerance,IterMax,true);
@@ -142,25 +143,21 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     delL = delLguess ;
     tau  = tauGuess  ;
     
-%     % Insert non-iterated guess values
-%     delG(not(WillIterate) & lGivenL) = delGguess(not(WillIterate) & lGivenL);
-%     delL(not(WillIterate) & lGivenG) = delLguess(not(WillIterate) & lGivenG);
-%     tau (not(WillIterate))           = tauGuess (not(WillIterate))          ;
-    
     % Insert Newton solutions
-    delL(lGivenG & WillIterate) = Solution(lGivenG(WillIterate),1)   ;
-    delG(lGivenL & WillIterate) = Solution(lGivenL(WillIterate),1)   ;
-    tau (WillIterate)          = Solution(   :   ,2)   ;
+    Iwill                          = Ioriginal(willIterate)         ;
+    delG(Iwill(1:nLIterate))       = Solution(1:nLIterate,1)        ;
+    delL(Iwill((nLIterate+1):end)) = Solution((nLIterate+1):end,1)  ;
+    tau (Iwill)                    = Solution(   :   ,2)            ;
 
     %   Critical quantities
-    delG(GivenC) = 1;
-    delL(GivenC) = 1;
-    tau (GivenC) = 1;
+    delG(givenC) = 1;
+    delL(givenC) = 1;
+    tau (givenC) = 1;
     
     % Undefinable quantities
-    delG(CannotSaturate) = 0  ;
-    delL(CannotSaturate) = 0  ;
-    tau (CannotSaturate) = 0  ;
+    delG(cannotSaturate) = 0  ;
+    delL(cannotSaturate) = 0  ;
+    tau (cannotSaturate) = 0  ;
 
     % Put back into passed-in ordering
     delG(Iordered) = delG;
