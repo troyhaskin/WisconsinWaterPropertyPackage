@@ -2,82 +2,89 @@ function [Helm,Helm_d,Helm_dd] = HelmholtzResidualCombo__d_dd(delta,tau)
     
     [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
     
-    betaInv   = 1 ./ beta                   ;
-    Helm      = 0*delta                     ;
-    Helm_d    = Helm                        ;
-    Helm_dd   = Helm                        ;
-    SumErr    = Helm                        ; % Summation correction (Kahan summation)
-    SumErr_d  = Helm                        ; % Summation correction (Kahan summation)
-    SumErr_dd = Helm                        ; % Summation correction (Kahan summation)
+    betaInv        = 1 ./ beta      ;
+    N              = numel(delta)   ;
+    Helm(N,1)      = 0              ;
+    Helm_d(N,1)    = 0              ;
+    Helm_dd(N,1)   = 0              ;
+    %     SumErr(N,1)    = 0              ; % Summation correction (Kahan summation)
+    %     SumErr_d(N,1)  = 0              ; % Summation correction (Kahan summation)
+    %     SumErr_dd(N,1) = 0              ; % Summation correction (Kahan summation)
     
     for k = 1:7
-
+        
         % Shared portion
         Part = n(k) * delta.^(d(k)-2) .* tau.^(t(k));
-
-
+        
+        
         % Calculate zeroth derivative Helmholtz free energy component
-        % Part = n(k) * delta.^(d(k)) .* tau.^(t(k))   ;
-        [Helm,SumErr] = KahanSum(Helm, delta.^2 .* Part ,SumErr)      ;
-
-
+        %         [Helm,SumErr] = KahanSum(Helm, delta.^2 .* Part ,SumErr)      ;
+        Helm = Helm + delta.^2 .* Part;
+        
+        
         % Calculate first derivative Helmholtz free energy component
-        % Part    = n(k) * d(k) * delta.^(d(k)-1) .* tau.^(t(k))  ;
-        [Helm_d,SumErr_d] = KahanSum(Helm_d, d(k) * delta .* Part ,SumErr_d)      ;
-
-
+        %         [Helm_d,SumErr_d] = KahanSum(Helm_d, d(k) * delta .* Part ,SumErr_d)      ;
+        Helm_d = Helm_d + d(k) * delta .* Part;
+        
+        
         % Calculate second derivative Helmholtz free energy component
-        % Part    = n(k) * d(k) * (d(k)-1) * delta.^(d(k)-2) .* tau.^(t(k))  ;
-        [Helm_dd,SumErr_dd] = KahanSum(Helm_dd, d(k) * (d(k)-1) * Part ,SumErr_dd);
-
+        %         [Helm_dd,SumErr_dd] = KahanSum(Helm_dd, d(k) * (d(k)-1) * Part ,SumErr_dd);
+        Helm_dd = Helm_dd + d(k) * (d(k)-1) * Part;
+        
     end
     
     
     for k = 8:51
-
+        
         % Helper variables
         delta2c = delta.^(c(k));
         
         % Calculate zeroth derivative Helmholtz free energy component
         Part    = n(k) * delta.^(d(k)) .* tau.^(t(k)) .* exp(-delta2c)  ;
-        [Helm,SumErr] = KahanSum(Helm,Part,SumErr)                      ;
-
-
+        %         [Helm,SumErr] = KahanSum(Helm,Part,SumErr)                      ;
+        Helm = Helm + Part;
+        
+        
         % Calculate first derivative Helmholtz free energy component
         Part_d = Part .* (d(k) - c(k) * delta2c) ./ delta   ;
-        [Helm_d,SumErr_d] = KahanSum(Helm_d,Part_d,SumErr_d);
-
-
+        %         [Helm_d,SumErr_d] = KahanSum(Helm_d,Part_d,SumErr_d);
+        Helm_d = Helm_d + Part_d;
+        
+        
         % Calculate second derivative Helmholtz free energy component
         Part = -(d(k) + c(k)*(c(k)-1)* delta2c) .* Part   ./ delta.^2   + ...
-                (d(k) - c(k)         * delta2c) .* Part_d ./ delta      ;
-        [Helm_dd,SumErr_dd] = KahanSum(Helm_dd,Part,SumErr_dd)          ;
-
+            (d(k) - c(k)         * delta2c) .* Part_d ./ delta      ;
+        %         [Helm_dd,SumErr_dd] = KahanSum(Helm_dd,Part,SumErr_dd)          ;
+        Helm_dd = Helm_dd + Part;
+        
     end
     
     for k = 52:54
         m       = k - 51                                                        ;
         Arg     = -alpha(m)*(delta-epsilon(m)).^2 - beta(m)*(tau-gamma(m)).^2   ;
-
-
+        
+        
         % Calculate zeroth derivative Helmholtz free energy component
         Part    = n(k) * delta.^(d(k)) .* tau.^(t(k)) .* exp(Arg)   ;
-        [Helm,SumErr] = KahanSum(Helm,Part,SumErr)                  ;
-
-
+        %         [Helm,SumErr] = KahanSum(Helm,Part,SumErr)                  ;
+        Helm = Helm + Part;
+        
+        
         % Calculate first derivative Helmholtz free energy component
         Part_d = Part .* (d(k)./delta - 2*alpha(m)*(delta-epsilon(m)))  ;
-        [Helm_d,SumErr_d] = KahanSum(Helm_d,Part_d,SumErr_d)            ;
-
-
+        %         [Helm_d,SumErr_d] = KahanSum(Helm_d,Part_d,SumErr_d)            ;
+        Helm_d = Helm_d + Part_d;
+        
+        
         % Calculate second derivative Helmholtz free energy component
         Part = -(d(k)./delta.^2 + 2*alpha(m))                    .* Part    + ...
-                (d(k)./delta    - 2*alpha(m)*(delta-epsilon(m))) .* Part_d  ;
-        [Helm_dd,SumErr_dd] = KahanSum(Helm_dd,Part,SumErr_dd)              ;
+            (d(k)./delta    - 2*alpha(m)*(delta-epsilon(m))) .* Part_d  ;
+        %         [Helm_dd,SumErr_dd] = KahanSum(Helm_dd,Part,SumErr_dd)              ;
+        Helm_dd = Helm_dd + Part;
         
     end
-
-
+    
+    
     notCrit  = (delta ~= 1)     ;
     delta    = delta(notCrit)   ;
     tau      = tau(notCrit)     ;
@@ -85,7 +92,7 @@ function [Helm,Helm_d,Helm_dd] = HelmholtzResidualCombo__d_dd(delta,tau)
     for k = 55:56
         m        = k - 51	;
         p        = k - 54	;
-
+        
         Theta                  = GetTheta(deltaMod,tau,A(p),betaInv(m))                     ;
         Delta                  = GetDelta(deltaMod,Theta,B(p),a(p))                         ;
         Psi                    = GetPsi(deltaMod,tau,C(p),D(p))                             ;
@@ -93,24 +100,27 @@ function [Helm,Helm_d,Helm_dd] = HelmholtzResidualCombo__d_dd(delta,tau)
         Psi_dd                 = GetPsi_dd(deltaMod,Psi,C(p))                               ;
         [Deltabi_d,Deltabi_dd] = ...
             GetDeltabiCombo_d_dd(delta,deltaMod,Delta,Theta,A(p),B(p),a(p),b(p),betaInv(m)) ;
-
-
+        
+        
         % Calculate zeroth derivative Helmholtz free energy component
         Part    = n(k) * Delta.^(b(p)) .* delta .* Psi  ;
-        [Helm(notCrit),SumErr(notCrit)] = KahanSum(Helm(notCrit),Part,SumErr(notCrit))      ;
-
-
+        %         [Helm(notCrit),SumErr(notCrit)] = KahanSum(Helm(notCrit),Part,SumErr(notCrit))      ;
+        Helm(notCrit) = Helm(notCrit) + Part;
+        
+        
         % Calculate first derivative Helmholtz free energy component
         Part        =  Delta.^(b(p)) .* (Psi + delta .* Psi_d)  ;
         Part        = n(k)*(Part + Deltabi_d .* delta .* Psi)   ;
-        [Helm_d(notCrit),SumErr_d(notCrit)] = KahanSum(Helm_d(notCrit),Part,SumErr_d(notCrit)); 
-
-
+        %         [Helm_d(notCrit),SumErr_d(notCrit)] = KahanSum(Helm_d(notCrit),Part,SumErr_d(notCrit));
+        Helm_d(notCrit) = Helm_d(notCrit) + Part;
+        
+        
         % Calculate second derivative Helmholtz free energy component
         Part      = Delta.^(b(p)).*(2*Psi_d + delta.*Psi_dd)                                        ;
         Part      = Part + 2*Deltabi_d .* (Psi+delta.*Psi_d)+Deltabi_dd.*delta.*Psi                 ;
-        [Helm_dd(notCrit),SumErr_dd(notCrit)] = KahanSum(Helm_dd(notCrit),Part,SumErr_dd(notCrit))  ;
-
+        %         [Helm_dd(notCrit),SumErr_dd(notCrit)] = KahanSum(Helm_dd(notCrit),Part,SumErr_dd(notCrit))  ;
+        Helm_dd(notCrit) = Helm_dd(notCrit) + Part;
+        
     end
     
 end

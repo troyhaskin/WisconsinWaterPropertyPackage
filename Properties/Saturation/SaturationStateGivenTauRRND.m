@@ -31,17 +31,17 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     Tolerance = DefaultAbsoluteIterationTolerance()     ; % Abolsute iteration tolerance
     IterMax   = DefaultMaximumIterationCount()          ; % Maximum iteration count
     Calculate = not(NearTc) & NotAboveTc & AboveTt      ; % Mask for temps. not close to the critical point
-    Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
     
     %   Perform one Newton calculation to initialize Broyden Jacobian
+    Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
     [dx,~,S.r1,S.r2,S.iJ11,S.iJ12,S.iJ21,S.iJ22] = newton(Guess,1:nnz(Calculate),tau(Calculate));
     S.delL    = Guess(:,1);
     S.delG    = Guess(:,2);
     
     % Solve the system
     if any(Calculate)
-        xSol = NewtonUpdater(@(x,mask) updater(x,mask,tau(Calculate)),Guess-dx,1E-13,IterMax);
-        xSol = NewtonUpdater(@(x,mask) newton(x,mask,tau(Calculate)),xSol,Tolerance,IterMax);
+        xSol = NewtonUpdater(@(x,mask) broydenClose(x,mask,tau(Calculate)),Guess-dx,1E-13,IterMax);
+        xSol = NewtonUpdater(@(x,mask)       newton(x,mask,tau(Calculate)),xSol,Tolerance,IterMax);
         
         % Update the iterated values
         delL(Calculate) = xSol(:,1);
@@ -72,9 +72,8 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     
     
     
-    function [dx,RNorm] = updater(x,mask,tau0)
+    function [dx,RNorm] = broydenClose(x,mask,tau0)
         [dx,RNorm,S] = broyden(x,mask,tau0,S);
-%         [dx,RNorm] = newton(x,mask,tau0);
     end
     
     
