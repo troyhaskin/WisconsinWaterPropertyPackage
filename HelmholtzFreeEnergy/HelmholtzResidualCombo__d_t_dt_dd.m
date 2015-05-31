@@ -67,7 +67,7 @@ function [Helm,Helm_d,Helm_t,Helm_dt,Helm_dd] = HelmholtzResidualCombo__d_t_dt_d
 
         
         %   Calculate
-        Helm_dt = Helm_dt + t(k) * Part1./tau;
+        Helm_t = Helm_t + t(k) * Part1./tau;
 %         [Helm_t,SumErr_t] = KahanSum(Helm_t,Part1 * t(k)./tau,SumErr_t);
 
         
