@@ -331,35 +331,3 @@ function [iNDmix,Pnd,delL,delG] = LocalMixtureInternalEnergy(del,tau)
     
 end
 
-
-
-% function taukp1 = discreteNewtonUpdate(taukm1,tauk,Rkm1,Rk)
-%     %   Secant method
-%     dx     = Rk .* (tauk - taukm1) ./ (Rk - Rkm1)   ;
-%     taukp1 = guardedStep(tauk,dx)                   ;
-%     
-%     if any(isnan(taukp1))
-%         g = [ ];
-%     end
-%     
-% end
-% 
-% 
-% function taukp1 = discreteHalleyUpdate(taukm2,taukm1,tauk,Rkm2,Rkm1,Rk)
-%     %   Secant method
-%     idtaukkm1   = 1./(tauk   - taukm1);
-%     idtaukkm2   = 1./(tauk   - taukm2);
-%     idtaukm1km2 = 1./(taukm1 - taukm2);
-%     
-%     DRk  = (idtaukkm1 + idtaukkm2).*Rk  - (idtaukkm1 + idtaukm1km2).*Rkm1 + (idtaukm1km2 - idtaukkm2).*Rkm2;
-%     DDRk = 2*((idtaukkm1 .* idtaukkm2).*Rk - (idtaukkm1 .* idtaukm1km2).*Rkm1 + (idtaukkm2 .* idtaukm1km2).*Rkm2);
-%     
-%     dx     = 2*Rk.*DRk./ (2*DRk.^2 - Rk.* DDRk) ;
-%     taukp1 = guardedStep(tauk,dx)               ;
-%     
-%     if any(isnan(taukp1))
-%         g = [ ];
-%     end
-%     
-% end
-

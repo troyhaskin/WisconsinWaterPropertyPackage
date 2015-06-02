@@ -39,9 +39,8 @@ function [Helm,Helm_d] = HelmholtzResidualCombo__d(delta,tau)
         
         
         % Calculate first derivative Helmholtz free energy component
-        Part_d = Part .* (d(k) - c(k) * delta2c) ./ delta   ;
         %         [Helm_d,SumErr_d] = KahanSum(Helm_d,Part_d,SumErr_d);
-        Helm_d = Helm_d + Part_d;
+        Helm_d = Helm_d + Part .* (d(k) - c(k) * delta2c) ./ delta   ;
 
     end
     
@@ -84,9 +83,8 @@ function [Helm,Helm_d] = HelmholtzResidualCombo__d(delta,tau)
         
         % Calculate first derivative Helmholtz free energy component
         Part        =  Delta.^(b(p)) .* (Psi + delta .* Psi_d)  ;
-        Part        = n(k)*(Part + Deltabi_d .* delta .* Psi)   ;
         %         [Helm_d(notCrit),SumErr_d(notCrit)] = KahanSum(Helm_d(notCrit),Part,SumErr_d(notCrit));
-        Helm_d(notCrit) = Helm_d(notCrit) + Part; 
+        Helm_d(notCrit) = Helm_d(notCrit) + n(k)*(Part + Deltabi_d .* delta .* Psi)   ;
 
     end
     
