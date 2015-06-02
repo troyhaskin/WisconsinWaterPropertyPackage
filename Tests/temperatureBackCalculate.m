@@ -42,12 +42,12 @@ figure(2);
 
     
 figure(3);
-h = scatter(dMix,iMix,150,CriticalTemperature()./tauB,'filled');
+h = plot3(dMix,iMix,CriticalTemperature()./tauB,'o');
 h.Parent.XScale = 'log';
 h.Marker = 'o';
 grid('on');
 box('on');
-axis([1E-5,10,-0.5,9]);
+axis([1E-5,10,-0.5,9,250,650]);
 h.Parent.FontName = 'CMU Concrete';
 h.Parent.FontSize = 12;
 xl = xlabel('Dimensionless Density [-]','FontName','CMU Concrete','FontSize',14);

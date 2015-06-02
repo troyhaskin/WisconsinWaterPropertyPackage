@@ -125,17 +125,24 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
         IterMax     = DefaultMaximumIterationCount();
 
         % Fill guess matrix
-        Guess     = [[delGguess(1:nGivenL);delLguess(nGivenL+1:end)] , tauGuess];
-        Guess     = Guess(willIterate,:);
+        xSol = [[delGguess(1:nGivenL);delLguess(nGivenL+1:end)] , tauGuess];
+        xSol = xSol(willIterate,:);
         nLIterate = nnz(delGiven(willIterate) > 1);
-
-        % Update handle
-        Updater  = @(Unknowns,Mask) UpdateSystem(Unknowns,Mask,delGiven(willIterate),nLIterate);
+        
+        %   Perform one Newton calculation to initialize Broyden Jacobian
+        [dx,~,S.r1,S.r2,S.iJ11,S.iJ12,S.iJ21,S.iJ22] = ...
+            newton(xSol,1:nnz(willIterate),delGiven(willIterate),nLIterate);
+        S.del = xSol(:,1);
+        S.tau = xSol(:,2);
 
         % Newton solution
-        Solution = NewtonUpdater(Updater,Guess,Tolerance,IterMax,true);
+        %   Solve
+        xSol = NewtonUpdater(@(x,mask) broydenClose(x,mask,delGiven(willIterate),nLIterate),xSol-dx,1E-13,IterMax);
+        xSol = NewtonUpdater(@(x,mask)       newton(x,mask,delGiven(willIterate),nLIterate),xSol,Tolerance,IterMax);
+        
+        
     else
-        Solution       = delGiven(:,[1,1])  ;
+        xSol = delGiven(:,[1,1])  ;
     end
     
     % Allocations
@@ -145,9 +152,9 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     
     % Insert Newton solutions
     Iwill                          = Ioriginal(willIterate)         ;
-    delG(Iwill(1:nLIterate))       = Solution(1:nLIterate,1)        ;
-    delL(Iwill((nLIterate+1):end)) = Solution((nLIterate+1):end,1)  ;
-    tau (Iwill)                    = Solution(   :   ,2)            ;
+    delG(Iwill(1:nLIterate))       = xSol(1:nLIterate,1)        ;
+    delL(Iwill((nLIterate+1):end)) = xSol((nLIterate+1):end,1)  ;
+    tau (Iwill)                    = xSol(   :   ,2)            ;
 
     %   Critical quantities
     delG(givenC) = 1;
@@ -165,15 +172,24 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     tau (Iordered) = tau;
 
     % Get Pressures
-    Pnd = PressureOneRND(delL,tau);
+    Pnd = PressureOneRND(delG,tau);
+
+
+
+
+
+
+
+
+    function [dx,rNorm] = broydenClose(x,mask,delGiven,NliquidGiven)
+        [dx,rNorm,S] = broyden(x,mask,delGiven,NliquidGiven,S);
+    end
 
 end
 
 
 
-
-
-function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
+function [dx,rNorm,r1,r2,iJ11,iJ12,iJ21,iJ22] = newton(x,mask,delGiven,nLiquidGiven)
 %
 %   This function provides the Newton updates for an unknown reduced density
 %   delUnknown and associated saturation temperature tauSat given the opposing reduced 
@@ -191,24 +207,24 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
 %
     
     % Pull unknowns
-    dels     = Unknowns(:,1)    ;
-    taus     = Unknowns(:,2)    ;
-%     delGiven = Unknowns(:,3)    ;
+    dels     = x(:,1)    ;
+    taus     = x(:,2)    ;
     
-    Nmask   = length(Mask)              ;
-    NgivenL = nnz(Mask <= NliquidGiven) ; % number of liquid knowns remaining
+    %   Indexes/masks for determining liquid vs. gas given
+    Nmask   = length(mask)              ;
+    NgivenL = nnz(mask <= nLiquidGiven) ; % number of liquid knowns remaining
     NgivenG = Nmask - NgivenL           ; % number of gas    knowns remaining
     iMaskL  =       1     : NgivenL     ;
     iMaskG  = (NgivenL+1) :  Nmask      ;
 
     % Assign values for liquid-given equations
-    delLL = delGiven(Mask(iMaskL))  ;
+    delLL = delGiven(mask(iMaskL))  ;
     delGL = dels    (iMaskL)        ;
     tauLL = taus    (iMaskL)        ;
 
     % Assign values for gas-given equations
     delLG = dels    (iMaskG)        ;
-    delGG = delGiven(Mask(iMaskG))  ;
+    delGG = delGiven(mask(iMaskG))  ;
     tauGG = taus    (iMaskG)        ;
     
     % Since empty masks create row-empties, this ensures they are
@@ -251,10 +267,10 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
     fL = PhiRLL - PhiRGL + log(delLL./delGL);
     fG = PhiRLG - PhiRGG + log(delLG./delGG);
     
-    R1 = [ fL .* delLL .* delGL  + delLL .* (delGL - delLL) .* (1 + delLL .* PhiRLL_d);...
+    r1 = [ fL .* delLL .* delGL  + delLL .* (delGL - delLL) .* (1 + delLL .* PhiRLL_d);...
            fG .* delLG .* delGG  + delLG .* (delGG - delLG) .* (1 + delLG .* PhiRLG_d)];
 
-	R2 = [ fL .* delLL .* delGL  + delGL .* (delGL - delLL) .* (1 + delGL .* PhiRGL_d);...
+	r2 = [ fL .* delLL .* delGL  + delGL .* (delGL - delLL) .* (1 + delGL .* PhiRGL_d);...
            fG .* delLG .* delGG  + delGG .* (delGG - delLG) .* (1 + delGG .* PhiRGG_d)];
     
     % Helper variables for Jacobian evalutions
@@ -276,32 +292,136 @@ function [dUnknowns,RNorm] = UpdateSystem(Unknowns,Mask,delGiven,NliquidGiven)
     
     
     % Jacobian values
-    R1_d = [                          delLL .* gLL + fL_d                           ;...
+    r1_d = [                          delLL .* gLL + fL_d                           ;...
             (delGG - 2*delLG) .* gLG + (delGG - delLG) .* delLG .* gLG_d + fG_d    ];
         
-    R1_t = [delLL .* (delGL - delLL) .* gLL_t + fL_t   ;...
+    r1_t = [delLL .* (delGL - delLL) .* gLL_t + fL_t   ;...
             delLG .* (delGG - delLG) .* gLG_t + fG_t   ];
 
-	R2_d = [(2*delGL - delLL) .* gGL + (delGL - delLL) .* delGL .* gGL_d + fL_d    ;...
+	r2_d = [(2*delGL - delLL) .* gGL + (delGL - delLL) .* delGL .* gGL_d + fL_d    ;...
                         -delGG .* gGG + fG_d                          ];
 
-    R2_t = [delGL .* (delGL - delLL) .* gGL_t + fL_t   ;...
+    r2_t = [delGL .* (delGL - delLL) .* gGL_t + fL_t   ;...
             delGG .* (delGG - delLG) .* gGG_t + fG_t   ];
 
     % Determinant
-    DetR = R1_d .* R2_t - R1_t.*R2_d                                            ;
+    detJ = r1_d .* r2_t - r1_t.*r2_d;
+
+    
+    % Inverse Jacobian elements
+    iJ11 =  r2_t ./ detJ;
+    iJ12 = -r1_t ./ detJ;
+    iJ21 = -r2_d ./ detJ;
+    iJ22 =  r1_d ./ detJ;
 
     % Final Newton Directions
-    ddel  =  (R1 .* R2_t - R2 .* R1_t) ./ DetR ;
-    dtau  =  (R2 .* R1_d - R1 .* R2_d) ./ DetR ;
+    ddel  =  iJ11 .* r1 + iJ12 .* r2;
+    dtau  =  iJ21 .* r1 + iJ22 .* r2;
 
     % Final outputs
-%     dUnknowns = [ddel,dtau,0*real(ddel)];
-    dUnknowns = [ddel,dtau]             ;
-    RNorm     = abs(real(R1)) + abs(real(R2)) + imag(R1) + imag(R2); % L_1 norm
+    dx    = [ddel,dtau]             ;
+    rNorm = abs(real(r1)) + abs(real(r2)) + imag(r1) + imag(r2); % L_1 norm
     
 end
 
 
 
+function [dx,rNorm,S] = broyden(x,mask,delGiven,nLgiven,S)
+    
+    % Pull unknowns
+    del = x(:,1)    ;
+    tau = x(:,2)    ;
+    
+    %   Indexes/masks for determining liquid vs. gas given
+    Nmask   = length(mask)          ;
+    NgivenL = nnz(mask <= nLgiven)  ; % number of liquid knowns remaining
+    NgivenG = Nmask - NgivenL       ; % number of gas    knowns remaining
+    iMaskL  =       1     : NgivenL ;
+    iMaskG  = (NgivenL+1) :  Nmask  ;
+
+    % Assign values for liquid-given equations
+    delLL = delGiven(mask(iMaskL)) ;
+    delGL = del    (iMaskL)        ;
+    tauLL = tau    (iMaskL)        ;
+
+    % Assign values for gas-given equations
+    delLG = del    (iMaskG)        ;
+    delGG = delGiven(mask(iMaskG))  ;
+    tauGG = tau    (iMaskG)        ;
+    
+    % Since empty masks create row-empties, this ensures they are
+    % column-empties.
+    delLL = delLL(:);
+    delGL = delGL(:);
+    tauLL = tauLL(:);
+    delLG = delLG(:);
+    delGG = delGG(:);
+    tauGG = tauGG(:);
+
+    % Integer masks for vectorized Helmholtz functions:
+    %       The most expensive evaluation in almost all of these thermodynamic calls is 
+    %       the Helmholtz free energy functions.  As such, one the biggest optimizations
+    %       lies in reducing calls to those functions by vectorizing as much as possible.
+    %
+    % Pack the dels and taus for input into the HFE functions
+    delHelm = [delLL;delGL;delLG;delGG];
+    tauHelm = [tauLL;tauLL;tauGG;tauGG];
+
+    % Call the required HFE functions
+    [PhiR,PhiR_d] = HelmholtzResidualCombo__d(delHelm,tauHelm);
+    
+    % Unpack values
+    Chunks = [NgivenL,NgivenL,NgivenG,NgivenG];
+    [PhiRLL   ,PhiRGL   ,PhiRLG   ,PhiRGG   ] = VectorChunk(PhiR   ,Chunks);
+    [PhiRLL_d ,PhiRGL_d ,PhiRLG_d ,PhiRGG_d ] = VectorChunk(PhiR_d ,Chunks);
+    
+
+    % ============================================================================ %
+    %                      Calculate Dimensionless Pressure                        %
+    % ============================================================================ %
+    % Pnd is the dimensionless pressure eliminated from
+    % the system to shrink the solution space.  Here are the functions and
+    % derivatives that are needed in the residuals below.
+
+    fL = PhiRLL - PhiRGL + log(delLL./delGL);
+    fG = PhiRLG - PhiRGG + log(delLG./delGG);
+    
+    r1 = [ fL .* delLL .* delGL  + delLL .* (delGL - delLL) .* (1 + delLL .* PhiRLL_d);...
+           fG .* delLG .* delGG  + delLG .* (delGG - delLG) .* (1 + delLG .* PhiRLG_d)];
+
+	r2 = [ fL .* delLL .* delGL  + delGL .* (delGL - delLL) .* (1 + delGL .* PhiRGL_d);...
+           fG .* delLG .* delGG  + delGG .* (delGG - delLG) .* (1 + delGG .* PhiRGG_d)];
+
+       
+     % Form deltas
+    dx1  = del - S.del(mask)    ;
+    dx2  = tau - S.tau(mask)    ;
+    dr1  = r1   - S.r1(mask)    ;
+    dr2  = r2   - S.r2(mask)    ;
+    drN  = dr1.^2 + dr2.^2      ;
+    
+    % Update Inverse Jacobian
+    term         = (dx1 - S.iJ11(mask).*dr1 - S.iJ12(mask).*dr2)./drN;
+    S.iJ11(mask) = S.iJ11(mask) + dr1.*term;
+    S.iJ12(mask) = S.iJ12(mask) + dr2.*term;
+    term         = (dx2 - S.iJ21(mask).*dr1 - S.iJ22(mask).*dr2)./drN;
+    S.iJ21(mask) = S.iJ21(mask) + dr1.*term;
+    S.iJ22(mask) = S.iJ22(mask) + dr2.*term;
+
+
+    % Newton updates
+    ddel = S.iJ11(mask) .* r1 + S.iJ12(mask) .* r2;
+    dtau = S.iJ21(mask) .* r1 + S.iJ22(mask) .* r2;
+    
+    % Pack updates and calculate norm for the Newton updater
+    dx    = [ddel,dtau]         ;
+    rNorm = abs(r1) + abs(r2)   ;
+    
+    
+    %   Update struct elements
+    S.del(mask) = del  ;
+    S.tau(mask) = tau  ;
+    S.r1(mask)  = r1   ;
+    S.r2(mask)  = r2   ;
+end
 
