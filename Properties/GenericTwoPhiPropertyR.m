@@ -1,4 +1,4 @@
-function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck,TwoPhase)
+function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck,twoPhiState)
     
     if nargin < 5
         PhaseCheck = true;
@@ -13,42 +13,45 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
 
     %  Phase Determination
     % -----------------------------------------------
-    if (nargin < 6)
+    if isempty(twoPhiState) || all(not(twoPhiState.isTwoPhi))
         % Perform the phase boundary check
         if PhaseCheck
-            [Psat,delL,delG] = SaturationStateGivenTauRR(tau);
-            TwoPhase = GetTwoPhaseMask(delta,delL,delG);
+            [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau);
+            isTwoPhi = GetTwoPhaseMask(delta,delL,delG);
         else
-            TwoPhase = false(Nstates,1);
+            isTwoPhi = false(Nstates,1);
         end
     else
-        % The TwoPhase mask has been passed in; skip phase boundary check.
+        delL     = twoPhiState.delL     ;
+        delG     = twoPhiState.delG     ;
+        Pnd      = twoPhiState.Pnd      ;
+        isTwoPhi = twoPhiState.isTwoPhi ;
     end
-    OnePhase = not(TwoPhase);
+    isOnePhi = not(isTwoPhi);
     %   end: Phase Determination
     % -----------------------------------------------
     
     
     % -----------------------------------------------
     % begin: One Phase Handling
-    if any(OnePhase)
-        del1 = SmartMask(delta,OnePhase);
-        tau1 = SmartMask(tau  ,OnePhase);
+    if any(isOnePhi)
+        del1 = SmartMask(delta,isOnePhi);
+        tau1 = SmartMask(tau  ,isOnePhi);
         
-        Psi(OnePhase,:) = OnePhiHandle(del1,tau1,OnePhase);
+        Psi(isOnePhi,:) = OnePhiHandle(del1,tau1,isOnePhi);
     end
     % end: One Phase Handling
     
     
     % begin: Two Phase Handling
-    if any(TwoPhase)
+    if any(isTwoPhi)
         
         % Grab the two-phase values only
-        del2    = SmartMask(delta,TwoPhase)  ;
-        delL2   = SmartMask(delL ,TwoPhase)  ;
-        delG2   = SmartMask(delG ,TwoPhase)  ;
-        Psat2   = SmartMask(Psat ,TwoPhase)  ;
-        tau2    = SmartMask(tau  ,TwoPhase)  ;
+        del  = SmartMask(delta,isTwoPhi);
+        delL = SmartMask(delL ,isTwoPhi);
+        delG = SmartMask(delG ,isTwoPhi);
+        Pnd  = SmartMask(Pnd  ,isTwoPhi);
+        tau  = SmartMask(tau  ,isTwoPhi);
         
         % Determine the two-phase methodology passed in
         Choice  = GetTwoPhiHandlingChoice(TwoPhiOption);
@@ -57,26 +60,26 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
         switch(lower(Choice))
             
             case('quality') % Quality-weighted
-                x    = QualityFromDensity(del2,delL2,delG2) ; % Quality
-                PsiL = OnePhiHandle(delL2,tau2,TwoPhase)    ; % Sat. Liquid value
-                PsiG = OnePhiHandle(delG2,tau2,TwoPhase)    ; % Sat. Gas value
+                x    = QualityFromDensity(del,delL,delG) ; % Quality
+                PsiL = OnePhiHandle(delL,tau,isTwoPhi)    ; % Sat. Liquid value
+                PsiG = OnePhiHandle(delG,tau,isTwoPhi)    ; % Sat. Gas value
                 
                 LatentPsi       = PsiG - PsiL;
-                Psi(TwoPhase,:) = PsiL + bsxfun(@times,x,LatentPsi); % Quality-weighted value
+                Psi(isTwoPhi,:) = PsiL + bsxfun(@times,x,LatentPsi); % Quality-weighted value
                 
                 
             case({'void','void fracion','homogeneous void fraction'}) % Void-weighted
                 
-                alpha = HomogeneousVoidFraction(del2,delL2,delG2)   ; % Homogeneous Void Fraction
-                PsiL  = OnePhiHandle(delL2,tau2,TwoPhase)           ; % Sat. Liquid value
-                PsiG  = OnePhiHandle(delG2,tau2,TwoPhase)           ; % Sat. Gas value
+                alpha = HomogeneousVoidFraction(del,delL,delG)   ; % Homogeneous Void Fraction
+                PsiL  = OnePhiHandle(delL,tau,isTwoPhi)           ; % Sat. Liquid value
+                PsiG  = OnePhiHandle(delG,tau,isTwoPhi)           ; % Sat. Gas value
                 
                 LatentPsi       = PsiG - PsiL;
-                Psi(TwoPhase,:) = Psil + bsxfun(@times,alpha,LatentPsi); % Void-weighted value
+                Psi(isTwoPhi,:) = Psil + bsxfun(@times,alpha,LatentPsi); % Void-weighted value
                 
                 
             case('customhandle') % Custom weight function
-                Psi(TwoPhase,:) = TwoPhiOption(Psat2,delL2,delG2,del2,tau2,TwoPhase);
+                Psi(isTwoPhi,:) = TwoPhiOption(Pnd,delL,delG,del,tau,isTwoPhi);
                 
             case('undefined')
                 warning('Thermodynamics:GenericTwoPhiPropertyR:UndefinedTwoPhaseBehavior',...

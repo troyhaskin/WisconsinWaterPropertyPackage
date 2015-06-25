@@ -1,4 +1,4 @@
-function T = Temperature(rho,i,Tguess,PhaseCheck)
+function [T,state] = Temperature(rho,i,Tguess,PhaseCheck)
     
     if (nargin < 4)
         PhaseCheck = true;
@@ -19,9 +19,9 @@ function T = Temperature(rho,i,Tguess,PhaseCheck)
 % therefore, the trouble of solving the two-phase mixture system can avoided.
 %
 
-    delta = rho / CriticalDensity()                  ;
-    iND   = i   / DimensioningInternalEnergy()       ;
-    T     = TemperatureRND(delta,iND,Tguess,PhaseCheck) ;
+    delta     = rho / CriticalDensity()                     ;
+    iND       = i   / DimensioningInternalEnergy()          ;
+    [T,state] = TemperatureRND(delta,iND,Tguess,PhaseCheck) ;
 
 
     T = RestoreShape(T,GreatestProduct(SizeRho,SizeI));

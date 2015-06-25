@@ -1,4 +1,4 @@
-function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tauGuess)
+function state = SaturationStateGivenMixedRhoIRRND(delta,iND,tauGuess)
     
     %   Input patterns:
     %       o SaturationStateGivenMixedRhoIRRND(delMix,iND,tauGuess)
@@ -26,15 +26,16 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau
 
 
     %   Allocation
-    tauHi = delta * 0   ;
-    tauLo = tauHi       ;
-    iHi   = tauHi       ;
-    iLo   = tauHi       ;
-    tau   = tauHi       ;
-    Pnd   = tauHi       ;
-    delL  = tauHi       ;
-    delG  = tauHi       ;
-    x     = tauHi       ;
+    N               = numel(delta)  ;
+    tauHi(N,1)      = 0             ;
+    tauLo(N,1)      = 0             ;
+    iHi(N,1)        = 0             ;
+    iLo(N,1)        = 0             ;
+    state.tau(N,1)  = 0             ;
+    state.Pnd(N,1)  = 0             ;
+    state.delL(N,1) = 0             ;
+    state.delG(N,1) = 0             ;
+    state.x(N,1)    = 0             ;
 
     
     
@@ -55,12 +56,12 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau
     
     
     %   Handle triple and critical states
-    iLo(isTripleTau)   = iNDt(isTripleTau)              ;
-    iHi(isTripleTau)   = iNDt(isTripleTau)              ;
-    tau(isTripleTau)   = taut                           ;
-    iLo(isCriticalTau) = DimensioningInternalEnergy()   ;
-    iHi(isCriticalTau) = DimensioningInternalEnergy()   ;
-    tau(isCriticalTau) = 1                              ;
+    iLo(isTripleTau)         = iNDt(isTripleTau)            ;
+    iHi(isTripleTau)         = iNDt(isTripleTau)            ;
+    state.tau(isTripleTau)   = taut                         ;
+    iLo(isCriticalTau)       = DimensioningInternalEnergy() ;
+    iHi(isCriticalTau)       = DimensioningInternalEnergy() ;
+    state.tau(isCriticalTau) = 1                            ;
 
     
     %   Non-DMVS region saturation calculation
@@ -85,13 +86,13 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau
         deltaDMVS             = delta(calculate)                                                ;
         tauBotTop             = estimateTauDMVSRegion(deltaDMVS)                                ;
         [~,tauNearTriple,~,~] = SaturationStateGivenDeltaRRND([deltaDMVS;deltaDMVS],tauBotTop)  ;
-        tauLo(calculate)         = tauNearTriple(   1   :end/2)                                 ;
-        tauHi(calculate)         = tauNearTriple(end/2+1: end )                                 ;
+        tauLo(calculate)      = tauNearTriple(   1   :end/2)                                    ;
+        tauHi(calculate)      = tauNearTriple(end/2+1: end )                                    ;
         
         %   DMVS region iND
-        iLoHi       = InternalEnergyOneRND([deltaDMVS;deltaDMVS],[tauLo(calculate);tauHi(calculate)])   ;
-        iLo(calculate) = iLoHi(   1   :end/2)                                                           ;
-        iHi(calculate) = iLoHi(end/2+1: end )                                                           ;
+        iLoHi = InternalEnergyOneRND([deltaDMVS;deltaDMVS],[tauLo(calculate);tauHi(calculate)]) ;
+        iLo(calculate) = iLoHi(   1   :end/2)                                                   ;
+        iHi(calculate) = iLoHi(end/2+1: end )                                                   ;
         
     end
 
@@ -103,8 +104,10 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau
     belowDMVS   = ((iHi - iND) > eps()) & inDMVS;
     isSaturated = isSaturated & not(belowDMVS)  ;
     
+    %   Save exact phase predicate in output
+    state.isTwoPhi = isSaturated;
     
-    % If no tauGuess is given, calculate it from a secant line.
+    % If no tauGuess is given, calculate it from a secant.
     if isempty(tauGuess)
         tauGuess = (tauHi - tauLo)./(iHi - iLo) .* (iND - iLo) + tauLo;
     end
@@ -117,8 +120,7 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau
     if any(calculate)
         
         %   Help variable
-        iwork = iND(calculate)    ;
-
+        iwork = iND(calculate);
         
         %   Calculate guess internal energy
         iMix = LocalMixtureInternalEnergy(delta(calculate),tauGuess(calculate));
@@ -141,13 +143,11 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau
         tauk   = tauk(I)                                ;
         
         %   Solve for tau
-        [Pnd(calculate),tau(calculate),delL(calculate),delG(calculate)] = ...
+        [state.Pnd(calculate),state.tau(calculate),state.delL(calculate),state.delG(calculate)] = ...
             solveTwoPhaseSystem(tauk(:,1:3),Rk(:,1:3),delta(calculate),iwork);
         
-        %   Solve for other variables
-        %         [Pnd(isSaturated),delL(isSaturated),delG(isSaturated)] = ...
-        %             SaturationStateGivenTauRRND(tau(isSaturated));
-        x(calculate) = QualityFromDensity(delta(calculate),delL(calculate),delG(calculate));
+        %   Quality
+        state.x(calculate) = QualityFromDensity(delta(calculate),state.delL(calculate),state.delG(calculate));
     end
     
     
@@ -165,11 +165,11 @@ function [Pnd,tau,delL,delG,x] = SaturationStateGivenMixedRhoIRRND(delta,iND,tau
         tauGuess = tauGuess(calculate)                      ;
         
         %   Call one-phase solver
-        tau (calculate) = TemperatureOneRRND(work,iND(calculate),tauGuess)  ;
-        delL(calculate) = work                                              ;
-        delG(calculate) = work                                              ;
-        Pnd (calculate) = PressureOneRND(work,tau(calculate))               ;
-        x   (calculate) = NaN                                               ;
+        state.tau (calculate) = TemperatureOneRRND(work,iND(calculate),tauGuess)  ;
+        state.delL(calculate) = work                                              ;
+        state.delG(calculate) = work                                              ;
+        state.Pnd (calculate) = PressureOneRND(work,state.tau(calculate))         ;
+        state.x   (calculate) = NaN                                               ;
     end
     
     
@@ -179,11 +179,10 @@ end
 function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(tauk,Rk,delta,iND)
     
     % Iteration Setup
-    tolerance     = 1E-13   ;
-    iterMax       = 50      ;
-    notDone       = true    ;
-    iter          = 0       ;
-    InotConverged = 1:length(delta);
+    tolerance     = 1E-13           ;   %   Confidently achievable tolerance for double precision 
+    iterMax       = 50              ;
+    iter          = 0               ;
+    InotConverged = 1:length(delta) ;
     
     %   Extract columns to variables
     taukm2 = tauk(:,3)  ;
@@ -200,18 +199,14 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(tauk,Rk,delta,iND)
     Pnd     = tau       ;
     delL    = tau       ;
     delG    = tau       ;
-%     taukp1  = tau       ;
-%     delLkp1 = tau       ;
-%     delGkp1 = tau       ;
-%     iNDmix  = tau       ;
-%     Pndkp1  = tau       ;
     
     %   Check for zeroth-guess convergence
-    convergedStepWise = abs(tauk-taukm1) < tolerance;
-    convergedResidual = abs(Rk)          < tolerance;
-    stagnantResidual  = abs(Rk - Rkm1)   < eps()    ;
+    convergedStepWise = abs(tauk-taukm1) < tolerance                            ;
+    convergedResidual = abs(Rk)          < tolerance                            ;
+    stagnantResidual  = abs(Rk - Rkm1)   < eps()                                ;
     converged         = convergedStepWise | convergedResidual | stagnantResidual;
-    notConverged      = not(converged);
+    notConverged      = not(converged)                                          ;
+    notDone           = any(notConverged)                                       ;
     
     %   Update converged index array
     Ipush         = InotConverged(converged)    ;
@@ -231,19 +226,13 @@ function [Pnd,tau,delL,delG] = solveTwoPhaseSystem(tauk,Rk,delta,iND)
         taukm2  = taukm2 (notConverged) ;
         taukm1  = taukm1 (notConverged) ;
         tauk    = tauk   (notConverged) ;
-%         taukp1  = tauk                  ;
         Rkm2    = Rkm2   (notConverged) ;
         Rkm1    = Rkm1   (notConverged) ;
         Rk      = Rk     (notConverged) ;
         iND     = iND    (notConverged) ;
         delta   = delta  (notConverged) ;
-%         iNDmix  = iNDmix (NotConverged) ;
         
     end
-    
-%     %   Create interpolation function handles
-%     disHalleyUpdate = @(varargin) discreteHalleyUpdate(varargin{:})   ;
-%     disNewtonUpdate = @(varargin) discreteNewtonUpdate(varargin{:})           ;
     
     
     % Enter Iterative loop

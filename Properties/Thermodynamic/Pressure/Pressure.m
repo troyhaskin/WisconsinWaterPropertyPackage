@@ -1,15 +1,18 @@
-function P = Pressure(rho,T,PhaseCheck)
+function P = Pressure(rho,T,PhaseCheck,twoPhiState)
 
-    [rho,SizeRho,T,SizeT] = Columnify(rho,T);
-
-    if (nargin < 3)
+    if (nargin < 4)
+        twoPhiState = [];
+    end
+    if (nargin < 3) || isempty(PhaseCheck)
         PhaseCheck = true;
     end
+    
+    [rho,SizeRho,T,SizeT] = Columnify(rho,T);
 
-    OnePhiHandle    = @(delta,tau,Mask) PressureOneR(delta,tau);
-	TwoPhiHandle	= @(Psat,~,~,~,~,TwoPhase) SmartMask(Psat,TwoPhase);
+    onePhiHandle = @(delta,tau,Mask) PressureOneR(delta,tau)            ;
+	twoPhiHandle = @(Pnd,~,~,~,~,TwoPhase) Pnd*DimensioningPressure()   ;
 
-    P = GenericTwoPhiProperty(rho,T,OnePhiHandle,TwoPhiHandle,PhaseCheck);
+    P = GenericTwoPhiProperty(rho,T,onePhiHandle,twoPhiHandle,PhaseCheck,twoPhiState);
     P = RestoreShape(P,GreatestProduct(SizeRho,SizeT));
 
 end

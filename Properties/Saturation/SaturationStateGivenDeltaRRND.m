@@ -128,21 +128,14 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
         xSol = [[delGguess(1:nGivenL);delLguess(nGivenL+1:end)] , tauGuess];
         xSol = xSol(willIterate,:);
         nLIterate = nnz(delGiven(willIterate) > 1);
-        
-        %   Perform one Newton calculation to initialize Broyden Jacobian
-        [dx,~,S.r1,S.r2,S.iJ11,S.iJ12,S.iJ21,S.iJ22] = ...
-            newton(xSol,1:nnz(willIterate),delGiven(willIterate),nLIterate);
-        S.del = xSol(:,1);
-        S.tau = xSol(:,2);
 
-        % Newton solution
-        %   Solve
-        xSol = NewtonUpdater(@(x,mask) broydenClose(x,mask,delGiven(willIterate),nLIterate),xSol-dx,1E-13,IterMax);
-        xSol = NewtonUpdater(@(x,mask)       newton(x,mask,delGiven(willIterate),nLIterate),xSol,Tolerance,IterMax);
+        %   Newton solution
+        xSol = NewtonUpdater(@(x,mask) newton(x,mask,delGiven(willIterate),nLIterate),xSol,Tolerance,IterMax);
         
         
     else
-        xSol = delGiven(:,[1,1])  ;
+        xSol      = delGiven(:,[1,1])   ;
+        nLIterate = 0                   ;
     end
     
     % Allocations
@@ -151,7 +144,7 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     tau  = tauGuess  ;
     
     % Insert Newton solutions
-    Iwill                          = Ioriginal(willIterate)         ;
+    Iwill                          = Ioriginal(willIterate)     ;
     delG(Iwill(1:nLIterate))       = xSol(1:nLIterate,1)        ;
     delL(Iwill((nLIterate+1):end)) = xSol((nLIterate+1):end,1)  ;
     tau (Iwill)                    = xSol(   :   ,2)            ;
@@ -173,17 +166,6 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
 
     % Get Pressures
     Pnd = PressureOneRND(delG,tau);
-
-
-
-
-
-
-
-
-    function [dx,rNorm] = broydenClose(x,mask,delGiven,NliquidGiven)
-        [dx,rNorm,S] = broyden(x,mask,delGiven,NliquidGiven,S);
-    end
 
 end
 
@@ -249,14 +231,16 @@ function [dx,rNorm,r1,r2,iJ11,iJ12,iJ21,iJ22] = newton(x,mask,delGiven,nLiquidGi
     [PhiR,PhiR_d,PhiR_t,PhiR_dt,PhiR_dd] = HelmholtzResidualCombo__d_t_dt_dd(delHelm,tauHelm);
     
     % Unpack values
-    Chunks = [NgivenL,NgivenL,NgivenG,NgivenG];
-    [PhiRLL   ,PhiRGL   ,PhiRLG   ,PhiRGG   ] = VectorChunk(PhiR   ,Chunks);
-    [PhiRLL_d ,PhiRGL_d ,PhiRLG_d ,PhiRGG_d ] = VectorChunk(PhiR_d ,Chunks);
-    [PhiRLL_t ,PhiRGL_t ,PhiRLG_t ,PhiRGG_t ] = VectorChunk(PhiR_t ,Chunks);
-    [~        ,PhiRGL_dd,PhiRLG_dd,~        ] = VectorChunk(PhiR_dd,Chunks);
-    [PhiRLL_dt,PhiRGL_dt,PhiRLG_dt,PhiRGG_dt] = VectorChunk(PhiR_dt,Chunks);
+    Chunks = repmat([NgivenL,NgivenL,NgivenG,NgivenG],1,5);
+    [...
+        PhiRLL   , PhiRGL   , PhiRLG   , PhiRGG   ,...
+        PhiRLL_d , PhiRGL_d , PhiRLG_d , PhiRGG_d ,...
+        PhiRLL_t , PhiRGL_t , PhiRLG_t , PhiRGG_t ,...
+        ~        , PhiRGL_dd, PhiRLG_dd, ~        ,...
+        PhiRLL_dt, PhiRGL_dt, PhiRLG_dt, PhiRGG_dt] =...
+        VectorChunk([PhiR;PhiR_d;PhiR_t;PhiR_dd;PhiR_dt],Chunks);
     
-
+    
     % ============================================================================ %
     %                      Calculate Dimensionless Pressure                        %
     % ============================================================================ %
@@ -273,7 +257,7 @@ function [dx,rNorm,r1,r2,iJ11,iJ12,iJ21,iJ22] = newton(x,mask,delGiven,nLiquidGi
 	r2 = [ fL .* delLL .* delGL  + delGL .* (delGL - delLL) .* (1 + delGL .* PhiRGL_d);...
            fG .* delLG .* delGG  + delGG .* (delGG - delLG) .* (1 + delGG .* PhiRGG_d)];
     
-    % Helper variables for Jacobian evalutions
+    % Helper variables for Jacobian evaluations
     fL_d = delLL .* (fL - 1 - delGL .* PhiRGL_d);
     fG_d = delGG .* (fG + 1 + delLG .* PhiRLG_d);
     fL_t = (PhiRLL_t - PhiRGL_t) .* delLL .* delGL ;
@@ -320,108 +304,8 @@ function [dx,rNorm,r1,r2,iJ11,iJ12,iJ21,iJ22] = newton(x,mask,delGiven,nLiquidGi
 
     % Final outputs
     dx    = [ddel,dtau]             ;
-    rNorm = abs(real(r1)) + abs(real(r2)) + imag(r1) + imag(r2); % L_1 norm
+    rNorm = abs(real(r1)) + abs(real(r2)) + (imag(r1) + imag(r2))*1i; % L_1 norm
     
 end
 
-
-
-function [dx,rNorm,S] = broyden(x,mask,delGiven,nLgiven,S)
-    
-    % Pull unknowns
-    del = x(:,1)    ;
-    tau = x(:,2)    ;
-    
-    %   Indexes/masks for determining liquid vs. gas given
-    Nmask   = length(mask)          ;
-    NgivenL = nnz(mask <= nLgiven)  ; % number of liquid knowns remaining
-    NgivenG = Nmask - NgivenL       ; % number of gas    knowns remaining
-    iMaskL  =       1     : NgivenL ;
-    iMaskG  = (NgivenL+1) :  Nmask  ;
-
-    % Assign values for liquid-given equations
-    delLL = delGiven(mask(iMaskL)) ;
-    delGL = del    (iMaskL)        ;
-    tauLL = tau    (iMaskL)        ;
-
-    % Assign values for gas-given equations
-    delLG = del    (iMaskG)        ;
-    delGG = delGiven(mask(iMaskG))  ;
-    tauGG = tau    (iMaskG)        ;
-    
-    % Since empty masks create row-empties, this ensures they are
-    % column-empties.
-    delLL = delLL(:);
-    delGL = delGL(:);
-    tauLL = tauLL(:);
-    delLG = delLG(:);
-    delGG = delGG(:);
-    tauGG = tauGG(:);
-
-    % Integer masks for vectorized Helmholtz functions:
-    %       The most expensive evaluation in almost all of these thermodynamic calls is 
-    %       the Helmholtz free energy functions.  As such, one the biggest optimizations
-    %       lies in reducing calls to those functions by vectorizing as much as possible.
-    %
-    % Pack the dels and taus for input into the HFE functions
-    delHelm = [delLL;delGL;delLG;delGG];
-    tauHelm = [tauLL;tauLL;tauGG;tauGG];
-
-    % Call the required HFE functions
-    [PhiR,PhiR_d] = HelmholtzResidualCombo__d(delHelm,tauHelm);
-    
-    % Unpack values
-    Chunks = [NgivenL,NgivenL,NgivenG,NgivenG];
-    [PhiRLL   ,PhiRGL   ,PhiRLG   ,PhiRGG   ] = VectorChunk(PhiR   ,Chunks);
-    [PhiRLL_d ,PhiRGL_d ,PhiRLG_d ,PhiRGG_d ] = VectorChunk(PhiR_d ,Chunks);
-    
-
-    % ============================================================================ %
-    %                      Calculate Dimensionless Pressure                        %
-    % ============================================================================ %
-    % Pnd is the dimensionless pressure eliminated from
-    % the system to shrink the solution space.  Here are the functions and
-    % derivatives that are needed in the residuals below.
-
-    fL = PhiRLL - PhiRGL + log(delLL./delGL);
-    fG = PhiRLG - PhiRGG + log(delLG./delGG);
-    
-    r1 = [ fL .* delLL .* delGL  + delLL .* (delGL - delLL) .* (1 + delLL .* PhiRLL_d);...
-           fG .* delLG .* delGG  + delLG .* (delGG - delLG) .* (1 + delLG .* PhiRLG_d)];
-
-	r2 = [ fL .* delLL .* delGL  + delGL .* (delGL - delLL) .* (1 + delGL .* PhiRGL_d);...
-           fG .* delLG .* delGG  + delGG .* (delGG - delLG) .* (1 + delGG .* PhiRGG_d)];
-
-       
-     % Form deltas
-    dx1  = del - S.del(mask)    ;
-    dx2  = tau - S.tau(mask)    ;
-    dr1  = r1   - S.r1(mask)    ;
-    dr2  = r2   - S.r2(mask)    ;
-    drN  = dr1.^2 + dr2.^2      ;
-    
-    % Update Inverse Jacobian
-    term         = (dx1 - S.iJ11(mask).*dr1 - S.iJ12(mask).*dr2)./drN;
-    S.iJ11(mask) = S.iJ11(mask) + dr1.*term;
-    S.iJ12(mask) = S.iJ12(mask) + dr2.*term;
-    term         = (dx2 - S.iJ21(mask).*dr1 - S.iJ22(mask).*dr2)./drN;
-    S.iJ21(mask) = S.iJ21(mask) + dr1.*term;
-    S.iJ22(mask) = S.iJ22(mask) + dr2.*term;
-
-
-    % Newton updates
-    ddel = S.iJ11(mask) .* r1 + S.iJ12(mask) .* r2;
-    dtau = S.iJ21(mask) .* r1 + S.iJ22(mask) .* r2;
-    
-    % Pack updates and calculate norm for the Newton updater
-    dx    = [ddel,dtau]         ;
-    rNorm = abs(r1) + abs(r2)   ;
-    
-    
-    %   Update struct elements
-    S.del(mask) = del  ;
-    S.tau(mask) = tau  ;
-    S.r1(mask)  = r1   ;
-    S.r2(mask)  = r2   ;
-end
 
