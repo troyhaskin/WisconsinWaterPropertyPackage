@@ -100,7 +100,8 @@ function [xSol,rSol,cSol] = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         SumErr      = SumErr (notConverged,:)   ;
     end
     
-    xSol(Iupdate,:) = xk(:,:)     ;
+    xSol(Iupdate,:) = xk(:,:)   ;
+    rSol(Iupdate)   = rBest     ;
 
 end
 
