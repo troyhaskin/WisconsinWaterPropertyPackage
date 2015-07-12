@@ -12,7 +12,8 @@ function delta = DensityRRND(Pnd,tau)
 
     %   One-phi solver
     if any(isOnePhi)
-        delta(isOnePhi) = NewtonUpdater(@(d,m) updater(d,m),delta(isOnePhi),1E-14,30)  ;
+        delta(isOnePhi) = NewtonUpdater(...
+            @(d,m) updater(d,m,Pnd(isOnePhi),tau(isOnePhi)),delta(isOnePhi),eps(),30)  ;
     end
     
     %   It is two-phase, but quality cannot be determined
@@ -21,7 +22,7 @@ function delta = DensityRRND(Pnd,tau)
     end
     
     
-    function [ddel,rNorm] = updater(delta,mask)
+    function [ddel,rNorm] = updater(delta,mask,Pnd,tau)
 
         %   Calculate Newton step
         [r,dr] = residual(delta,Pnd(mask),tau(mask))    ;

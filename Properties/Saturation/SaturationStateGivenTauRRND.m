@@ -42,8 +42,8 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
         S.delG    = Guess(:,2);
         
         %   Solve
-        xSol = NewtonUpdater(@(x,mask) broydenClose(x,mask,tau(Calculate)),Guess-dx,1E-13,IterMax);
-        xSol = NewtonUpdater(@(x,mask)       newton(x,mask,tau(Calculate)),xSol,Tolerance,IterMax);
+%         xSol = NewtonUpdater(@(x,mask) broydenClose(x,mask,tau(Calculate)),Guess-dx,1E-13,IterMax);
+        xSol = NewtonUpdater(@(x,mask)       newton(x,mask,tau(Calculate)),Guess,Tolerance,IterMax);
         
         % Update the iterated values
         delL(Calculate) = xSol(:,1);
