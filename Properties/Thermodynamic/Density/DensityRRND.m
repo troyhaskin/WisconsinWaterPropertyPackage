@@ -5,15 +5,15 @@ function delta = DensityRRND(Pnd,tau)
     isTwoPhi      = abs(Pnd - Psat) < 100*eps()         ;
     isOnePhi      = not(isTwoPhi)                       ;
     aboveCritical = (Psat == 0)                         ;
-    delta         = (Psat >  Pnd).*Pnd.*tau        +...
-                    (Psat <= Pnd).*delL            ;
-    delta         = aboveCritical.*Pnd.*tau             +...
+    delta         = (Psat >  Pnd).*delG                 +...
+                    (Psat <= Pnd).*delL                 ;
+    delta         = aboveCritical.*1                    +...
                     (1-aboveCritical).*delta            ;
 
     %   One-phi solver
     if any(isOnePhi)
         delta(isOnePhi) = NewtonUpdater(...
-            @(d,m) updater(d,m,Pnd(isOnePhi),tau(isOnePhi)),delta(isOnePhi),eps(),30)  ;
+            @(d,m) updater(d,m,Pnd(isOnePhi),tau(isOnePhi)),delta(isOnePhi),1E-14,30)  ;
     end
     
     %   It is two-phase, but quality cannot be determined
