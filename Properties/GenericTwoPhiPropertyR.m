@@ -7,13 +7,13 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
     %     Allocation and Setup
     % ----------------------------
     Nstates = max(length(delta),length(tau));
-    Nprops  = size(OnePhiHandle(NaN,NaN,true(Nstates,1)),2);
+    Nprops  = size(OnePhiHandle(1,1,true(Nstates,1)),2);
     Psi     = zeros(Nstates,Nprops);
 
 
     %  Phase Determination
     % -----------------------------------------------
-    if isempty(twoPhiState) || all(not(twoPhiState.isTwoPhi))
+    if (nargin < 6) || isempty(twoPhiState) || all(not(twoPhiState.isTwoPhi))
         % Perform the phase boundary check
         if PhaseCheck
             [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau);

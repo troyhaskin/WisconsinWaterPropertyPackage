@@ -6,7 +6,7 @@ function tau = TemperatureOneRRND(delta,iND,tau0)
     end
     
     %   Iteration set-up
-    tolerance = 1E-14   ;
+    tolerance = 1E-12   ;
     maxIter   = 100     ;
     updater   = @(tau,mask) update(tau,mask,delta,iND);
     tau       = NewtonUpdater(updater,tau0,tolerance,maxIter);

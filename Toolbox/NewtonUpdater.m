@@ -8,7 +8,7 @@ function [xSol,rSol,cSol] = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
     cSol         = xSol(:,1)             ;
     xk           = Guess                 ;
     N            = size(Guess,1)         ;
-    converged    = false(N,1)            ;
+%     converged    = false(N,1)            ;
     Iupdate      = (1:N)'                ;
     SumErr       = xSol                  ;
     Iter         = 0                     ;
@@ -55,8 +55,9 @@ function [xSol,rSol,cSol] = NewtonUpdater(Update,Guess,Tolerance,MaxIter,~)
         [dxNext,Rnew] = Update(xk - dxNow,Iupdate) ;
         
         % Back-track if needed by the following criteria
-        NeedBackTrack = (rBest < Rnew) | isnan(Rnew) | any(isnan(dxNext),2) | ...
-            any(imag(dxNext)~=0,2) | any(imag(Rnew)~=0,2);
+        NeedBackTrack = (rBest < Rnew)       | isnan(Rnew)              |...
+                        any(isnan(dxNext),2) | any(imag(dxNext)~=0,2)   |...
+                        any(imag(Rnew)~=0,2)                            ;
         
         % Back-tracker loop
         if any(NeedBackTrack)
@@ -115,9 +116,11 @@ function [dxNow,dxNext,Rnew] = Backtrack(xk,dxNow,iUpdate,Rbest,Update,alpha)
         
         [dxNext(relax,:),Rnew(relax)] = Update(xk(relax,:) - dxNow(relax,:),iUpdate(relax))  ;
         
-        relax(relax) =  (Rbest(relax) < Rnew(relax)) | isnan(Rnew(relax))               |...
-                        any(isnan(dxNext(relax)),2)  | any(imag(dxNext(relax))~=0,2)    |...
-                        any(imag(Rnew(relax))~=0,2)                                     ;
+        relax(relax) =  (Rbest(relax) < Rnew(relax))    |...
+                        isnan(Rnew(relax))              |...
+                        any(isnan(dxNext(relax)),2)     |...
+                        any(imag(dxNext(relax))~=0,2)   |...
+                        any(imag(Rnew(relax))~=0,2)     ;
     end
 end
 

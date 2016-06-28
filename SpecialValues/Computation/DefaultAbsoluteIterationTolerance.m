@@ -1,5 +1,5 @@
 function Tolerance = DefaultAbsoluteIterationTolerance()
     
-    Tolerance = 1E-15;
+    Tolerance = 1E-13;
     
 end

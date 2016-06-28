@@ -1,32 +1,46 @@
 function [Helm_t,Helm_tt] = HelmholtzResidualCombo_t_tt(delta,tau)
     
-    [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
+    persistent c d t n alpha beta gamma epsilon A B C D a b
+    if isempty(c)
+        [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = ...
+            Coefficients_HelmholtzResidual();
+    end
     
     betaInv   = 1./beta         ;
 	deltaMod  = (delta - 1).^2 + eps(delta)	;
-    Helm_t    = 0*delta               ;
     SumErr_t  = 0*delta               ; % Summation correction (Kahan summation)
-    Helm_tt   = 0*delta               ;
     SumErr_tt = 0*delta               ; % Summation correction (Kahan summation)
     
-    for k = 1:7
-        Part      = n(k) * t(k) .* delta.^(d(k)) .* tau.^(t(k)-1)   ;
-        [Helm_t,SumErr_t] = KahanSum(Helm_t,Part,SumErr_t);
-        
-        
-%         Part      = n(k)*t(k)*(t(k)-1) .* delta.^(d(k)) .* tau.^(t(k)-2)   ;
-        [Helm_tt,SumErr_tt] = KahanSum(Helm_tt , Part./tau * (t(k)-1) , SumErr_tt);
-    end
+%     for k = 1:7
+%         Part                = n(k) * t(k) .* delta.^(d(k)) .* tau.^(t(k)-1)         ;
+%         [Helm_t,SumErr_t]   = KahanSum(Helm_t,Part,SumErr_t)                        ;
+%         [Helm_tt,SumErr_tt] = KahanSum(Helm_tt , Part./tau * (t(k)-1) , SumErr_tt)  ;
+%     end
+%
+%   bsxfun version
+     Part   = bsxfun(@times,n(1:7).*t(1:7),...
+                bsxfun(@power,delta,d(1:7)).*bsxfun(@power,tau,t(1:7)-1));
+    Helm_tt = sum(bsxfun(@times,bsxfun(@rdivide,Part,tau),t(1:7)-1),2);
+    Helm_t  = sum(Part,2);
     
-    for k = 8:51
-        Part      = exp(-delta.^(c(k)))                                 ;
-        Part      = n(k)*t(k) * delta.^(d(k)) .* tau.^(t(k)-1) .* Part  ;
-        [Helm_t,SumErr_t] = KahanSum(Helm_t,Part,SumErr_t);
-        
-        
-%         Part      = n(k)*t(k)*(t(k)-1) * delta.^(d(k)) .* tau.^(t(k)-2) .* Part ;
-        [Helm_tt,SumErr_tt] = KahanSum(Helm_tt , Part./tau * (t(k)-1) , SumErr_tt);
-    end
+
+%     for k = 8:51
+%         Part      = exp(-delta.^(c(k)))                                 ;
+%         Part      = n(k)*t(k) * delta.^(d(k)) .* tau.^(t(k)-1) .* Part  ;
+%         [Helm_t,SumErr_t] = KahanSum(Helm_t,Part,SumErr_t);
+%         [Helm_tt,SumErr_tt] = KahanSum(Helm_tt , Part./tau * (t(k)-1) , SumErr_tt);
+%     end
+%
+%   bsxfun version
+    dd      = d(8:51);
+    cc      = c(8:51);
+    tt      = t(8:51);
+    nn      = n(8:51);
+    Part    = exp(-bsxfun(@power,delta,cc));
+    Part    = bsxfun(@times,nn.*tt,bsxfun(@power,delta,dd) .* bsxfun(@power,tau,tt-1)) .* Part  ;
+    Helm_t  = Helm_t  + sum(Part,2);
+    Helm_tt = Helm_tt + sum(bsxfun(@times,bsxfun(@rdivide,Part,tau),tt-1),2);
+    
     
     for k = 52:54
         m       = k - 51                                                        ;

@@ -69,8 +69,9 @@ function state = SaturationStateGivenMixedRhoIRRND(delta,iND,tauGuess)
     if any(calculate)
         
         %   non-DMVS region taus
-        [~,tauLo(calculate),~,~] = SaturationStateGivenDeltaRRND(delta(calculate))  ;
-        tauHi(calculate)         = taut                                             ;
+        [~,tauLo(calculate),~,~] = SaturationStateGivenDeltaRRND(...
+            delta(calculate),tauGuess(calculate))   ;
+        tauHi(calculate)         = taut             ;
         
         %   non-DMVS region iND
         iLo(calculate) = InternalEnergyOneRND(delta(calculate),tauLo(calculate));
@@ -317,6 +318,10 @@ function [iNDmix,Pnd,delL,delG] = LocalMixtureInternalEnergy(del,tau)
     iLND  = iLGND(1:end/2)      ;
     iGND  = iLGND(end/2+1:end)  ;
     iNDmix = iLND + x.*(iGND - iLND);
+    
+    if any(iNDmix < 0)
+        g = [];
+    end
     
 end
 

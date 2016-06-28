@@ -1,22 +1,42 @@
 function Helm_d = HelmholtzResidual_d(delta,tau)
 
-    [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
+    [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = ...
+        Coefficients_HelmholtzResidual();
+
+
+    betaInv = 1./beta   ;
+%     Helm_d  = 0*delta   ;
+    SumErr  = 0*delta   ; % Summation correction (Kahan summation)
+
+
+%     for k = 1:7
+%         Part    = n(k) * d(k) * delta.^(d(k)-1) .* tau.^(t(k))   ;
+%         [Helm_d,SumErr] = KahanSum(Helm_d,Part,SumErr);
+%     end
+%
+%   bsxfun version
+    Helm_d = sum(bsxfun(@times,n(1:7).*d(1:7),...
+                bsxfun(@power,delta,d(1:7)-1).*bsxfun(@power,tau,t(1:7))),2);
     
-    betaInv   = 1./beta         ;
-    Helm_d    = 0*delta         ;
-    SumErr    = 0*delta         ; % Summation correction (Kahan summation)
+
+%     for k = 8:51
+%         Part    = d(k) - c(k) * delta.^(c(k))               ;
+%         Part    = delta.^(d(k)-1) .* tau.^(t(k)).*(Part)    ;
+%         Part    = n(k) * exp(-delta.^(c(k))) .* Part        ;
+%         [Helm_d,SumErr] = KahanSum(Helm_d,Part,SumErr);
+%     end
+%
+%   bsxfun version
+    dd     = d(8:51);
+    cc     = c(8:51);
+    tt     = t(8:51);
+    nn     = n(8:51);
+    Part   = bsxfun(@minus,dd,bsxfun(@times,cc,bsxfun(@power,delta,cc)));
+    Part   = bsxfun(@power,delta,dd-1) .* bsxfun(@power,tau,tt) .* Part ;
+    Part   = bsxfun(@times,nn,exp(-bsxfun(@power,delta,cc)))    .* Part ;
+    Helm_d = Helm_d + sum(Part,2)                                       ;
     
-    for k = 1:7
-        Part    = n(k) * d(k) * delta.^(d(k)-1) .* tau.^(t(k))   ;
-        [Helm_d,SumErr] = KahanSum(Helm_d,Part,SumErr);
-    end
     
-    for k = 8:51
-        Part    = d(k) - c(k) * delta.^(c(k))               ;
-        Part    = delta.^(d(k)-1) .* tau.^(t(k)).*(Part)    ;
-        Part    = n(k) * exp(-delta.^(c(k))) .* Part        ;
-        [Helm_d,SumErr] = KahanSum(Helm_d,Part,SumErr);
-    end
     
     for k = 52:54
         m       = k - 51                                                        ;

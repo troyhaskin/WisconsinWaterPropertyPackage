@@ -1,5 +1,4 @@
-function [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual()
-    
+function [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual()    
     
     %   =====================================   %
     %                  Group 1                  %

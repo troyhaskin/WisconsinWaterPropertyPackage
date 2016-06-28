@@ -7,8 +7,8 @@ function [T,state] = Temperature(rho,i,Tguess,PhaseCheck)
     [rho,SizeRho,i,SizeI] = Columnify(rho,i)        ;
     [rho, i]              = BalanceSizes(rho,i)     ;
     
-    if (nargin < 3)
-        Tguess = rho*0 + 300                    ;
+    if (nargin < 3) || isempty(Tguess)
+        Tguess = rho*0 + 600;
     else
         [rho, Tguess] = BalanceSizes(rho,Tguess);
     end

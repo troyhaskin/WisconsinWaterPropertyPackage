@@ -2,7 +2,6 @@ function [Helm,Helm_d,Helm_t,Helm_dt,Helm_dd] = HelmholtzResidualCombo__d_t_dt_d
     
     [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
     
-    
     betaInv      = 1 ./ beta    ;
     N            = numel(delta) ;
     Helm(N,1)    = 0            ;
@@ -10,11 +9,6 @@ function [Helm,Helm_d,Helm_t,Helm_dt,Helm_dd] = HelmholtzResidualCombo__d_t_dt_d
     Helm_t(N,1)  = 0            ;
     Helm_dt(N,1) = 0            ;
     Helm_dd(N,1) = 0            ;
-%     SumErr    = Helm                        ; % Summation correction (Kahan summation)
-%     SumErr_d  = Helm                        ; % Summation correction (Kahan summation)
-%     SumErr_t  = Helm                        ; % Summation correction (Kahan summation)
-%     SumErr_dt = Helm                        ; % Summation correction (Kahan summation)
-%     SumErr_dd = Helm                        ; % Summation correction (Kahan summation)
     
     for k = 1:7
 
@@ -49,40 +43,54 @@ function [Helm,Helm_d,Helm_t,Helm_dt,Helm_dd] = HelmholtzResidualCombo__d_t_dt_d
 
     end
     
-    for k = 8:51
-
-        % Helper variables
-        delta2c = delta.^(c(k));
-        
-        % Calculate zeroth derivative Helmholtz free energy component
-        Part1 = n(k) * delta.^(d(k)) .* tau.^(t(k)) .* exp(-delta2c);
-        Helm  = Helm + Part1                                        ;
-%         [Helm,SumErr] = KahanSum(Helm,Part1,SumErr)                      ;
-
-
-        % Calculate first derivative Helmholtz free energy component
-        Part_d = Part1 .* (d(k) - c(k) * delta2c) ./ delta  ;
-        Helm_d = Helm_d + Part_d                            ;
-%         [Helm_d,SumErr_d] = KahanSum(Helm_d,Part_d,SumErr_d);
-
-        
-        %   Calculate
-        Helm_t = Helm_t + t(k) * Part1./tau;
-%         [Helm_t,SumErr_t] = KahanSum(Helm_t,Part1 * t(k)./tau,SumErr_t);
-
-        
-        %   Calculate
-        Helm_dt = Helm_dt + t(k) * Part_d./tau;
-%         [Helm_dt,SumErr_dt] = KahanSum(Helm_dt,Part_d * t(k)./tau,SumErr_dt);
-
-
-        % Calculate second derivative Helmholtz free energy component
-        Part1 = -(d(k) + c(k)*(c(k)-1)* delta2c) .* Part1  ./ delta.^2   + ...
-                 (d(k) - c(k)         * delta2c) .* Part_d ./ delta      ;
-        Helm_dd = Helm_dd + Part1;
-%         [Helm_dd,SumErr_dd] = KahanSum(Helm_dd,Part1,SumErr_dd)          ;
-
-    end
+%     for k = 8:51
+% 
+%         % Helper variables
+%         delta2c = delta.^(c(k));
+%         
+%         % Calculate zeroth derivative Helmholtz free energy component
+%         Part1 = n(k) * delta.^(d(k)) .* tau.^(t(k)) .* exp(-delta2c);
+%         Helm  = Helm + Part1                                        ;
+% 
+%         % Calculate first derivative Helmholtz free energy component
+%         Part_d = Part1 .* (d(k) - c(k) * delta2c) ./ delta  ;
+%         Helm_d = Helm_d + Part_d                            ;
+%         
+%         %   Calculate
+%         Helm_t = Helm_t + t(k) * Part1./tau;
+%         
+%         %   Calculate
+%         Helm_dt = Helm_dt + t(k) * Part_d./tau;
+% 
+%         % Calculate second derivative Helmholtz free energy component
+%         Part1 = -(d(k) + c(k)*(c(k)-1)* delta2c) .* Part1  ./ delta.^2   + ...
+%                  (d(k) - c(k)         * delta2c) .* Part_d ./ delta      ;
+%         Helm_dd = Helm_dd + Part1;
+% 
+%     end
+    
+    
+    dd = d(8:51);
+    cc = c(8:51);
+    tt = t(8:51);
+    nn = n(8:51);
+    % Helper variables
+    delta2c = bsxfun(@power,delta,cc);
+    
+    % Calculate zeroth derivative Helmholtz free energy component
+    Part1 = bsxfun(@times,nn,bsxfun(@power,delta,dd) .* bsxfun(@power,tau,tt) .* exp(-delta2c));
+    Helm  = Helm + sum(Part1,2);
+    Part_d = Part1.*bsxfun(@rdivide,bsxfun(@minus,dd,bsxfun(@times,cc,delta2c)),delta);
+     Helm_d = Helm_d + sum(Part_d,2);
+     Helm_t = Helm_t + sum(bsxfun(@times,tt,bsxfun(@rdivide,Part1,tau)),2);
+     Helm_dt = Helm_dt + sum(bsxfun(@times,tt,bsxfun(@rdivide,Part_d,tau)),2);
+     Helm_dd = Helm_dd + sum(...
+         bsxfun(@rdivide,bsxfun(@minus,dd,bsxfun(@times,cc        ,delta2c)).*Part_d,delta) -...
+         bsxfun(@rdivide,bsxfun(@plus ,dd,bsxfun(@times,cc.*(cc-1),delta2c)).*Part1 ,delta.^2),2);
+    
+    
+    
+    
     
     for k = 52:54
         m       = k - 51                                                        ;

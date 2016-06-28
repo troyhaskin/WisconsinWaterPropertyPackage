@@ -20,17 +20,17 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     end
     
     % Check tau for how close to critical it is
-    NearTc     = tau < DoNoIterationTau()   ;
-    AboveTc    = tau <   1                  ;   % Check if Tsat is above the critical point
-    AboveTt    = tau <= TriplePointTau()    ;
-    NotAboveTc = not(AboveTc)               ;
-    BelowTt    = not(AboveTt)               ;
+    nearTc     = tau < DoNoIterationTau()   ;
+    aboveTc    = tau <   1                  ;   % Check if Tsat is above the critical point
+    aboveTt    = tau <= TriplePointTau()    ;
+    notAboveTc = not(aboveTc)               ;
+    belowTt    = not(aboveTt)               ;
     
     
     % Iteration setup
     Tolerance = DefaultAbsoluteIterationTolerance()     ; % Abolsute iteration tolerance
     IterMax   = DefaultMaximumIterationCount()          ; % Maximum iteration count
-    Calculate = not(NearTc) & NotAboveTc & AboveTt      ; % Mask for temps. not close to the critical point
+    Calculate = not(nearTc) & notAboveTc & aboveTt      ; % Mask for temps. not close to the critical point
     
     % Solve the system
     if any(Calculate)
@@ -53,18 +53,18 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     
     % These values above for T above the vapor dome ensure that the fluid will
     % be flagged as single phase.
-    delL(AboveTc | BelowTt) = 0.0;
-    delG(AboveTc | BelowTt) = 0.0;
+    delL(aboveTc | belowTt) = 0.0;
+    delG(aboveTc | belowTt) = 0.0;
     
     % If exactly critical, assign exact values
     delL(tau == 1) = 1;
     delG(tau == 1) = 1;
     
     % Saturation pressure
-    Pnd             = delG                                              ; % allocate
-    Pnd(NotAboveTc) = PressureOneRND(delG(NotAboveTc),tau(NotAboveTc))  ;
-    Pnd(tau == 1)   = CriticalPressureND()                              ;
-    Pnd(AboveTc | BelowTt) = 0                                          ;
+    Pnd                    = delG                                               ;
+    Pnd(notAboveTc)        = PressureOneRND(delG(notAboveTc),tau(notAboveTc))   ;
+    Pnd(tau == 1)          = CriticalPressureND()                               ;
+    Pnd(aboveTc | belowTt) = 0                                                  ;
     
     % Expand vectors back to non-unique lengths
     Pnd  = Pnd (UniqueMask) ;
