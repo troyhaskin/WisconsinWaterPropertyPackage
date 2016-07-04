@@ -35,15 +35,9 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     % Solve the system
     if any(Calculate)
         
-        %   Perform one Newton calculation to initialize Broyden Jacobian
-        Guess     = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
-        [dx,~,S.r1,S.r2,S.iJ11,S.iJ12,S.iJ21,S.iJ22] = newton(Guess,1:nnz(Calculate),tau(Calculate));
-        S.delL    = Guess(:,1);
-        S.delG    = Guess(:,2);
-        
         %   Solve
-%         xSol = NewtonUpdater(@(x,mask) broydenClose(x,mask,tau(Calculate)),Guess-dx,1E-13,IterMax);
-        xSol = NewtonUpdater(@(x,mask)       newton(x,mask,tau(Calculate)),Guess,Tolerance,IterMax);
+        Guess = [delL(Calculate),delG(Calculate)]       ; % Starting values for the iteration
+        xSol  = NewtonUpdater(@(x,mask)       newton(x,mask,tau(Calculate)),Guess,Tolerance,IterMax);
         
         % Update the iterated values
         delL(Calculate) = xSol(:,1);
@@ -69,19 +63,11 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     % Expand vectors back to non-unique lengths
     Pnd  = Pnd (UniqueMask) ;
     delL = delL(UniqueMask) ;
-    delG = delG(UniqueMask) ;
-
-    
-    
-    
-    function [dx,RNorm] = broydenClose(x,mask,tau0)
-        [dx,RNorm,S] = broyden(x,mask,tau0,S);
-    end
-    
+    delG = delG(UniqueMask) ;    
     
 end
 
-function [dx,RNorm,r1,r2,iJ11,iJ12,iJ21,iJ22] = newton(x,Mask,tau0)
+function [dx,RNorm] = newton(x,Mask,tau0)
     
     N    = length(Mask);
     tau  = [tau0(Mask);tau0(Mask)];
@@ -135,61 +121,6 @@ function [dx,RNorm,r1,r2,iJ11,iJ12,iJ21,iJ22] = newton(x,Mask,tau0)
     % Pack updates and calculate norm for the Newton updater
     dx    = [ddelL,ddelG]       ;
     RNorm = abs(r1) + abs(r2)   ;
-
-end
-
-
-function [dx,RNorm,S] = broyden(xk,mask,tau0,S)
-    
-    N    = length(mask);
-    tau  = [tau0(mask);tau0(mask)];
-    delL = xk(:,1);
-    delG = xk(:,2);
-    
-    
-    %   Helmholtz Free Energy values
-    [PhiR,PhiR_d]                 = HelmholtzResidualCombo__d([delL;delG],tau)  ;
-    [PhiRL,PhiRG,PhiR_dL,PhiR_dG] = VectorChunk([PhiR;PhiR_d],N)                ;
-    
-    %   Terms used to form the residuals
-    Psig1  = PhiRL - PhiRG + log(delL./delG);
-    PdelL  = 1 + delL.*PhiR_dL              ;
-    PdelG  = 1 + delG.*PhiR_dG              ;
-
-    %   Residual and partial derivative values
-    r1 = delG.*Psig1 - PdelL.*(delL-delG);
-    r2 = delL.*Psig1 - PdelG.*(delL-delG);
-    
-    % Form deltas
-    dx1  = delL - S.delL(mask)  ;
-    dx2  = delG - S.delG(mask)  ;
-    dr1  = r1   - S.r1(mask)    ;
-    dr2  = r2   - S.r2(mask)    ;
-    drN  = dr1.^2 + dr2.^2      ;
-    
-    % Update Inverse Jacobian
-    term         = (dx1 - S.iJ11(mask).*dr1 - S.iJ12(mask).*dr2)./drN;
-    S.iJ11(mask) = S.iJ11(mask) + dr1.*term;
-    S.iJ12(mask) = S.iJ12(mask) + dr2.*term;
-    term         = (dx2 - S.iJ21(mask).*dr1 - S.iJ22(mask).*dr2)./drN;
-    S.iJ21(mask) = S.iJ21(mask) + dr1.*term;
-    S.iJ22(mask) = S.iJ22(mask) + dr2.*term;
-
-
-    % Newton updates
-    ddelL = S.iJ11(mask) .* r1 + S.iJ12(mask) .* r2;
-    ddelG = S.iJ21(mask) .* r1 + S.iJ22(mask) .* r2;
-    
-    % Pack updates and calculate norm for the Newton updater
-    dx    = [ddelL,ddelG]       ;
-    RNorm = abs(r1) + abs(r2)   ;
-    
-    
-    %   Update struct elements
-    S.delL(mask) = delL     ;
-    S.delG(mask) = delG     ;
-    S.r1(mask)   = r1       ;
-    S.r2(mask)   = r2       ;
 
 end
 

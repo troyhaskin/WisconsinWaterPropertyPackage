@@ -319,9 +319,5 @@ function [iNDmix,Pnd,delL,delG] = LocalMixtureInternalEnergy(del,tau)
     iGND  = iLGND(end/2+1:end)  ;
     iNDmix = iLND + x.*(iGND - iLND);
     
-    if any(iNDmix < 0)
-        g = [];
-    end
-    
 end
 

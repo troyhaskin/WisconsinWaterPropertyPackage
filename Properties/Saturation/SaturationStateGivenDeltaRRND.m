@@ -66,8 +66,11 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     [delGmin,delLmax]       = saturableDeltas()                     ;
 
     %   Density is within the bounds of the vapor dome.
-    canSaturate    = [delLgiven <= delLmax ; delGgiven >= delGmin ; true(nGivenC,1)];
-    cannotSaturate = not(canSaturate)                                                       ;
+    canSaturate    = [...
+        (delLgiven <= delLmax) | abs(delLgiven - delLmax) < 1000*eps(delLmax) ; ...
+        (delGgiven >= delGmin) | abs(delGgiven - delGmin) < 1000*eps(delGmin) ; ...
+        true(nGivenC,1)];
+    cannotSaturate = not(canSaturate)                                           ;
     
     %   Near critical densities are avoided due to stability issues (near singular Jacobian)
     shouldIterate = [delLgiven >= delLnearC ; delGgiven <= delGnearC ; false(nGivenC,1)];   
@@ -117,7 +120,13 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     % ================================================================================== %
     %                                 Newton Solution                                    %
     % ================================================================================== %
-    
+
+        % Allocations
+    delG = delGguess                                                    ;
+    delL = delLguess                                                    ;
+    tau  = tauGuess                                                     ;
+    xSol = [[delGguess(1:nGivenL);delLguess(nGivenL+1:end)] , tauGuess] ;
+
     if any(willIterate)
 
         % Iteration parameters
@@ -125,29 +134,19 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
         IterMax     = DefaultMaximumIterationCount();
 
         % Fill guess matrix
-        xSol = [[delGguess(1:nGivenL);delLguess(nGivenL+1:end)] , tauGuess];
-        xSol = xSol(willIterate,:);
-        nLIterate = nnz(delGiven(willIterate) > 1);
+        xSol      = xSol(willIterate,:)             ;
+        nLIterate = nnz(delGiven(willIterate) > 1)  ;
 
         %   Newton solution
         xSol = NewtonUpdater(@(x,mask) newton(x,mask,delGiven(willIterate),nLIterate),xSol,Tolerance,IterMax);
         
-        
-    else
-        xSol      = delGiven(:,[1,1])   ;
-        nLIterate = 0                   ;
+        % Insert Newton solutions
+        Iwill                          = Ioriginal(willIterate)     ;
+        delG(Iwill(1:nLIterate))       = xSol(1:nLIterate,1)        ;
+        delL(Iwill((nLIterate+1):end)) = xSol((nLIterate+1):end,1)  ;
+        tau (Iwill)                    = xSol(   :   ,2)            ;
+
     end
-    
-    % Allocations
-    delG = delGguess ;
-    delL = delLguess ;
-    tau  = tauGuess  ;
-    
-    % Insert Newton solutions
-    Iwill                          = Ioriginal(willIterate)     ;
-    delG(Iwill(1:nLIterate))       = xSol(1:nLIterate,1)        ;
-    delL(Iwill((nLIterate+1):end)) = xSol((nLIterate+1):end,1)  ;
-    tau (Iwill)                    = xSol(   :   ,2)            ;
 
     %   Critical quantities
     delG(givenC) = 1;
