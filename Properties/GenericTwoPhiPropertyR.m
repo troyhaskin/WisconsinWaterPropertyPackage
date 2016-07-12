@@ -75,7 +75,7 @@ function Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseC
                 PsiG  = OnePhiHandle(delG,tau,isTwoPhi)           ; % Sat. Gas value
                 
                 LatentPsi       = PsiG - PsiL;
-                Psi(isTwoPhi,:) = Psil + bsxfun(@times,alpha,LatentPsi); % Void-weighted value
+                Psi(isTwoPhi,:) = PsiL + bsxfun(@times,alpha,LatentPsi); % Void-weighted value
                 
                 
             case('customhandle') % Custom weight function
