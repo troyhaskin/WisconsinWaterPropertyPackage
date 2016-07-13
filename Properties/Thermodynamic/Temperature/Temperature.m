@@ -1,5 +1,6 @@
 function [T,state] = Temperature(rho,i,Tguess,PhaseCheck)
     
+    %   Handle inputs and balance sizes
     if (nargin < 4)
         PhaseCheck = true;
     end
@@ -12,18 +13,28 @@ function [T,state] = Temperature(rho,i,Tguess,PhaseCheck)
     else
         [rho, Tguess] = BalanceSizes(rho,Tguess);
     end
-        
-% 
-% For a given mixture density, if the mixture internal energy
-% is greater than the saturated internal energy, it is outside the vapor dome;
-% therefore, the trouble of solving the two-phase mixture system can avoided.
-%
-
-    delta     = rho / CriticalDensity()                     ;
-    iND       = i   / DimensioningInternalEnergy()          ;
-    [T,state] = TemperatureRND(delta,iND,Tguess,PhaseCheck) ;
-
-
+    
+    %   Nondimensionlize and pass to low-level function
+    rhoc        = CriticalDensity()                                 ;
+    ic          = DimensioningInternalEnergy()                      ;
+    Tc          = CriticalTemperature()                             ;
+    delta       = rho / rhoc                                        ;
+    iND         = i   / ic                                          ;
+    [tau,stateND] = TemperatureRRND(delta,iND,Tc./Tguess,PhaseCheck)  ;
+    
+    %   Re-dimensionlize variables
+    T = Tc./tau;
+    state.ND_      = stateND                                ;
+    state.rho      = rho                                    ;
+    state.i        = i                                      ;
+    state.T        = T                                      ;
+    state.rhoL     = stateND.delL * rhoc                    ;
+    state.rhoG     = stateND.delG * rhoc                    ;
+    state.P        = stateND.Pnd  * DimensioningPressure()  ;
+    state.x        = stateND.x                              ;
+    state.isTwoPhi = stateND.isTwoPhi                       ;
+    
+    %   Restore shape
     T = RestoreShape(T,GreatestProduct(SizeRho,SizeI));
 
 end

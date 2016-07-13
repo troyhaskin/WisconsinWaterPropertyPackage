@@ -1,8 +1,8 @@
-function [T,state] = TemperatureRND(delta,iND,Tguess,PhaseCheck)
+function [T,state] = TemperatureRND(delta,iND,tauGuess,PhaseCheck)
 
-    Tc          = CriticalTemperature()                     ;
-    tau         = Tc ./ Tguess                              ;
-    [tau,state] = TemperatureRRND(delta,iND,tau,PhaseCheck) ;
-    T           = Tc ./ tau                                 ;
+    Tc          = CriticalTemperature()                         ;
+    tau         = Tc ./ Tguess                                  ;
+    [tau,state] = TemperatureRRND(delta,iND,tauGuess,PhaseCheck);
+    T           = Tc ./ tau                                     ;
 
 end
