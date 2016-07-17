@@ -1,7 +1,9 @@
-function Psi = GenericTwoPhiProperty(rho,T,OnePhiHandle,TwoPhiOption,PhaseCheck,twoPhiState)
+function Psi = GenericTwoPhiProperty(rho,T,OnePhiHandle,TwoPhiOption,PhaseCheck,state)
     
-    if (nargin < 6)
-        twoPhiState = [];
+    if (nargin < 6) || isempty(state)
+        state = [];
+    else
+        state = state.ND_;
     end
 
     if (nargin < 5)
@@ -13,6 +15,6 @@ function Psi = GenericTwoPhiProperty(rho,T,OnePhiHandle,TwoPhiOption,PhaseCheck,
     delta = rho / CriticalDensity()     ;
 
     %	Call reduced core method
-    Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck,twoPhiState);
+    Psi = GenericTwoPhiPropertyR(delta,tau,OnePhiHandle,TwoPhiOption,PhaseCheck,state);
 
 end
