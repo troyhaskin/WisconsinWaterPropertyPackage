@@ -12,6 +12,7 @@ function P = Pressure(rho,T,PhaseCheck,state)
     onePhiHandle = @(delta,tau,Mask) PressureOneR(delta,tau)            ;
 	twoPhiHandle = @(Pnd,~,~,~,~,TwoPhase) Pnd*DimensioningPressure()   ;
 
+    P = GenericTwoPhiProperty(rho,T,onePhiHandle,twoPhiHandle,PhaseCheck,state);
     P = RestoreShape(P,GreatestProduct(SizeRho,SizeT));
 
 end
