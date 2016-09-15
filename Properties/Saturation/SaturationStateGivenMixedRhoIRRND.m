@@ -35,7 +35,7 @@ function state = SaturationStateGivenMixedRhoIRRND(delta,iND,tauGuess)
     state.Pnd(N,1)  = 0             ;
     state.delL(N,1) = 0             ;
     state.delG(N,1) = 0             ;
-    state.x(N,1)    = 0             ;
+    state.x(N,1)    = -100          ;
 
     
     
@@ -170,7 +170,7 @@ function state = SaturationStateGivenMixedRhoIRRND(delta,iND,tauGuess)
         state.delL(calculate) = work                                              ;
         state.delG(calculate) = work                                              ;
         state.Pnd (calculate) = PressureOneRND(work,state.tau(calculate))         ;
-        state.x   (calculate) = NaN                                               ;
+        state.x   (calculate) = -100                                              ;
     end
     
     

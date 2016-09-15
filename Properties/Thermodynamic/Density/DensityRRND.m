@@ -1,4 +1,4 @@
-function delta = DensityRRND(Pnd,tau)
+function delta = DensityRRND(Pnd,tau,x)
 
     %   Perform two-phase check
     [Psat,delL,delG] = SaturationStateGivenTauRRND(tau) ;
@@ -18,7 +18,8 @@ function delta = DensityRRND(Pnd,tau)
     
     %   It is two-phase, but quality cannot be determined
     if any(isTwoPhi)
-        delta(isTwoPhi) = NaN;
+        x               = x(isTwoPhi)                                   ;
+        delta(isTwoPhi) = 1./((1-x)./delL(isTwoPhi) + x./delG(isTwoPhi));
     end
     
     

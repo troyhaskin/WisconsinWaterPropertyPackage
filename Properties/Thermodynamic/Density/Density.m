@@ -1,6 +1,6 @@
-function rho = Density(P,T)
+function rho = Density(P,T,varargin)
 
-    delta = DensityRRND(P/DimensioningPressure(),CriticalTemperature()./T)  ;
+    delta = DensityRRND(P/DimensioningPressure(),CriticalTemperature()./T,varargin{:})  ;
     rho   = delta * CriticalDensity()                                       ;
 
 end

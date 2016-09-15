@@ -17,7 +17,14 @@ function [tau,state] = TemperatureRRND(delta,iND,tau0,PhaseCheck)
     n                   = numel(delta) ;
     tau(n,1)            = 0            ;
     state.isTwoPhi(n,1) = false        ;
-    
+    state.tau(n,1)      = 0            ;
+    state.Pnd(n,1)      = 0            ;
+    state.del(n,1)      = 0            ;
+    state.delL(n,1)     = 0            ;
+    state.delG(n,1)     = 0            ;
+    state.x(n,1)        = -100         ;
+
+
     %   Single phase solve
     if any(onePhase)
         tau(onePhase) = TemperatureOneRRND(delta(onePhase),iND(onePhase),tau0(onePhase));
@@ -34,17 +41,13 @@ function [tau,state] = TemperatureRRND(delta,iND,tau0,PhaseCheck)
         
         %   Expand predicate to all states given to function
         state.isTwoPhi(mayBeTwoPhase) = state2.isTwoPhi ;
-        state2.isTwoPhi               = state.isTwoPhi  ;
-        state                         = state2          ;
+        state.tau(mayBeTwoPhase)      = state2.tau      ;
+        state.Pnd(mayBeTwoPhase)      = state2.Pnd      ;
+        state.del(mayBeTwoPhase)      = state2.delL     ;
+        state.delL(mayBeTwoPhase)     = state2.delL     ;
+        state.delG(mayBeTwoPhase)     = state2.delG     ;
+        state.x(mayBeTwoPhase)        = state2.x        ;
         
-        %   Detect and contract out false-positives
-        notTwoPhase             = xor(state.isTwoPhi,mayBeTwoPhase) ;
-        notTwoPhase             = notTwoPhase (mayBeTwoPhase)       ;
-        state.tau(notTwoPhase)  = []                                ;
-        state.Pnd(notTwoPhase)  = []                                ;
-        state.delL(notTwoPhase) = []                                ;
-        state.delG(notTwoPhase) = []                                ;
-        state.x(notTwoPhase)    = []                                ;
     end
     
 end

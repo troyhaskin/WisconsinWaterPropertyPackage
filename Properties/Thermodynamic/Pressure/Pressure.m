@@ -7,7 +7,8 @@ function P = Pressure(rho,T,PhaseCheck,state)
         PhaseCheck = true;
     end
     
-    [rho,SizeRho,T,SizeT] = Columnify(rho,T);
+    [rho,SizeRho,T,SizeT] = Columnify(rho,T)    ;
+    [rho,T]               = BalanceSizes(rho,T) ;
 
     onePhiHandle = @(delta,tau,Mask) PressureOneR(delta,tau)            ;
 	twoPhiHandle = @(Pnd,~,~,~,~,TwoPhase) Pnd*DimensioningPressure()   ;

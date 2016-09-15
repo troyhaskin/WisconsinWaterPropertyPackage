@@ -7,7 +7,8 @@ function varargout = FilterList(PredicateOrMask,varargin)
             'The number of outputs should equal the number of vectors to be filtered.');
     end
     
-    filtered = cellfun( @(v) v(PredicateOrMask,:),varargin,'UniformOutput',false);
+    %   Apply the filter with scalar expansion through sift.
+    filtered = cellfun( @(v) sift(v,PredicateOrMask),varargin,'UniformOutput',false);
 
     if (nargout == 1)
         varargout{1} = filtered;
@@ -15,4 +16,12 @@ function varargout = FilterList(PredicateOrMask,varargin)
         varargout = filtered;
     end
 
+end
+
+function v = sift(v,mask)
+    if isscalar(v)
+        v = v*size(numel(mask),1);
+    else
+        v = v(mask,:);
+    end
 end

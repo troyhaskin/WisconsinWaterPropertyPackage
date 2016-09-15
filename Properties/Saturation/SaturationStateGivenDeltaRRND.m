@@ -159,9 +159,9 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     tau (cannotSaturate) = 0  ;
 
     % Put back into passed-in ordering
-    delG(Iordered) = delG;
-    delL(Iordered) = delL;
-    tau (Iordered) = tau;
+    delG(Iordered) = real(delG);
+    delL(Iordered) = real(delL);
+    tau (Iordered) = real(tau);
 
     % Get Pressures
     Pnd = PressureOneRND(delG,tau);

@@ -55,10 +55,12 @@ function [Pnd,delL,delG] = SaturationStateGivenTauRRND(tau,delL0,delG0,UniqueMas
     delG(tau == 1) = 1;
     
     % Saturation pressure
-    Pnd                    = delG                                               ;
-    Pnd(notAboveTc)        = PressureOneRND(delG(notAboveTc),tau(notAboveTc))   ;
-    Pnd(tau == 1)          = CriticalPressureND()                               ;
-    Pnd(aboveTc | belowTt) = 0                                                  ;
+    Pnd                    = delG                                           ;
+    Pnd(tau == 1)          = CriticalPressureND()                           ;
+    Pnd(aboveTc | belowTt) = 0                                              ;
+    if any(notAboveTc)
+        Pnd(notAboveTc) = PressureOneRND(delG(notAboveTc),tau(notAboveTc))  ;
+    end
     
     % Expand vectors back to non-unique lengths
     Pnd  = Pnd (UniqueMask) ;
