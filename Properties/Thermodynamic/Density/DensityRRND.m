@@ -2,7 +2,7 @@ function delta = DensityRRND(Pnd,tau,x)
 
     %   Perform two-phase check
     [Psat,delL,delG] = SaturationStateGivenTauRRND(tau) ;
-    isTwoPhi      = abs(Pnd - Psat) < 100*eps()         ;
+    isTwoPhi      = abs(Pnd - Psat) < 1E-7              ;
     isOnePhi      = not(isTwoPhi)                       ;
     aboveCritical = (Psat == 0)                         ;
     delta         = (Psat >  Pnd).*delG                 +...
@@ -18,8 +18,23 @@ function delta = DensityRRND(Pnd,tau,x)
     
     %   It is two-phase, but quality cannot be determined
     if any(isTwoPhi)
+        
+        %   Raw quality
         x               = x(isTwoPhi)                                   ;
         delta(isTwoPhi) = 1./((1-x)./delL(isTwoPhi) + x./delG(isTwoPhi));
+        
+        %   Borderline liquid saturated
+        mask = x < 0;
+        if any(mask)
+            delta(mask) = delL(mask);
+        end
+        
+        %   Borderline gas saturated
+        mask = x > 1;
+        if any(mask)
+            delta(mask) = delL(mask);
+        end
+        
     end
     
     

@@ -5,10 +5,10 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     % ========================================================= %
     
     % Look for given guess tau
-    if (nargin < 2) || isempty(tau0)
-        useDeltaEstimation = true;
+    if (nargin >= 2) && not(isempty(tau0))
+        tauGuess = tau0     ;
     else
-        useDeltaEstimation = false;
+        tauGuess = 0*delta  ;
     end
 
     % Given Masks
@@ -79,8 +79,8 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     nearTriple = [(delLgiven >= delLt) & (delLgiven <= delLmax) ; false(nGivenG+nGivenC,1)];
 
     % Logical index for values that will be iterated upon
-    willGuess   = (not(nearTriple) | not(useDeltaEstimation)) & canSaturate ;
-    willIterate = willGuess & shouldIterate                                 ;
+    willGuess   = not(nearTriple) & canSaturate ;
+    willIterate = willGuess & shouldIterate     ;
 
 
 
@@ -91,30 +91,24 @@ function [Pnd,tau,delL,delG] = SaturationStateGivenDeltaRRND(delta,tau0)
     %   Allocation
     delLguess = delta;
     delGguess = delta;
-    tauGuess  = delta;
 
 
     % Get guess values for all given density values not near the triple line
-    if useDeltaEstimation
-        
-        %   No tau0 given
-        if any(willGuess)
-            [delLguess,delGguess,tauGuess] = ...
-                AssignWithFilter(...
-                    @(wg) EstimateDelLDelGTauFromDel(delGiven(wg)),...
-                    willGuess,delLguess,delGguess,tauGuess);
+    if any(willGuess)
+        if all(tauGuess == 0)
+        [delLguess,delGguess,tauGuess] = ...
+            AssignWithFilter(...
+            @(wg) EstimateDelLDelGTauFromDel(delGiven(wg)),...
+            willGuess,delLguess,delGguess,tauGuess);
+        else
+            [delLguess,delGguess,~] = ...
+            AssignWithFilter(...
+            @(wg) EstimateDelLDelGTauFromDel(delGiven(wg)),...
+            willGuess,delLguess,delGguess,tauGuess);
         end
-
-    else
-
-         if any(canSaturate)
-            %   tau0 given
-            tauGuess = tau0;
-            delLguess(givenG & canSaturate) = EstimateDelLFromTau(tauGuess(givenG & canSaturate));
-            delGguess(givenL & canSaturate) = EstimateDelGFromTau(tauGuess(givenL & canSaturate));
-        end
-
     end
+
+
 
 
     % ================================================================================== %

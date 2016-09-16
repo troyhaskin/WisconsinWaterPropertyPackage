@@ -70,7 +70,7 @@ function state = SaturationStateGivenMixedRhoIRRND(delta,iND,tauGuess)
         
         %   non-DMVS region taus
         [~,tauLo(calculate),~,~] = SaturationStateGivenDeltaRRND(...
-            delta(calculate),tauGuess(calculate))   ;
+            delta(calculate))   ;
         tauHi(calculate)         = taut             ;
         
         %   non-DMVS region iND
