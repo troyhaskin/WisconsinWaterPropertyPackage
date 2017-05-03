@@ -2,7 +2,6 @@ Module Toolbox
 
    Implicit None
 
-
    ! These will be unneeded when the ISO_Fortran_Env module is fully supported
    ! Real Kind parameters
    Integer, Parameter :: Single   = Selected_Real_Kind(p=6)

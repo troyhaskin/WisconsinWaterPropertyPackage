@@ -1,4 +1,4 @@
-function [Helm,Helm_d,Helm_t,Helm_dt,Helm_dd] = HelmholtzResidualCombo__d_t_dt_dd(delta,tau)
+function [Helm,Helm_d,Helm_t,Helm_dt,Helm_dd,Helm_tt] = HelmholtzResidualCombo__d_t_dt_dd_tt(delta,tau)
     
     [c,d,t,n,alpha,beta,gamma,epsilon,A,B,C,D,a,b] = Coefficients_HelmholtzResidual();
     
@@ -9,37 +9,19 @@ function [Helm,Helm_d,Helm_t,Helm_dt,Helm_dd] = HelmholtzResidualCombo__d_t_dt_d
     Helm_t  = zeros(N,1)    ;
     Helm_dt = zeros(N,1)    ;
     Helm_dd = zeros(N,1)    ;
+    Helm_tt = zeros(N,1)    ;
     
     for k = 1:7
         
-        % Shared portion
-        Part1 = n(k) * delta.^(d(k)-2) .* tau.^(t(k));
-        
-        
-        % Calculate zeroth derivative Helmholtz free energy component
-        Helm = Helm + delta.^2 .* Part1;
-        %         [Helm,SumErr] = KahanSum(Helm, delta.^2 .* Part1 ,SumErr)      ;
-        
-        
-        % Calculate first derivative Helmholtz free energy component
-        Helm_d = Helm_d + d(k) * delta .* Part1;
-        %         [Helm_d,SumErr_d] = KahanSum(Helm_d, d(k) * delta .* Part1 ,SumErr_d)      ;
-        
-        
-        % Calculate first derivative Helmholtz free energy component
-        Part2   = t(k) * delta ./ tau .* Part1  ;
-        Helm_dt = Helm_dt +  d(k) * Part2       ;
-        %         [Helm_dt,SumErr_dt] = KahanSum(Helm_dt, d(k) * Part2 ,SumErr_dt);
-        
-        
-        % Calculate first derivative Helmholtz free energy component
-        Helm_t = Helm_t + delta .* Part2;
-        %         [Helm_t,SumErr_t] = KahanSum(Helm_t, delta .* Part2 ,SumErr_t);
-        
-        
-        % Calculate second derivative Helmholtz free energy component
-        Helm_dd = Helm_dd + d(k) * (d(k)-1) * Part1;
-        %         [Helm_dd,SumErr_dd] = KahanSum(Helm_dd, d(k) * (d(k)-1) * Part1 ,SumErr_dd);
+        Helm0   = n(k) * delta.^d(k) .* tau.^t(k)   ;
+        Helm    = Helm + Helm0                      ;
+        work    = d(k) * Helm0./delta               ;
+        Helm_d  = Helm_d  + work                    ;
+        Helm_dd = Helm_dd + (d(k)-1) * work./delta  ;
+        work    = t(k) * Helm0./tau                 ;
+        Helm_t  = Helm_t  + work                    ;
+        Helm_tt = Helm_tt + (t(k)-1) * work./tau    ;
+        Helm_dt = Helm_dt + d(k)     * work./delta  ;
         
     end
     
